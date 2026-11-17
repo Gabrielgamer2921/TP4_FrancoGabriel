@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a734be83c2bba4241b0d19444b45906a, type: 3}
+  m_Name: Torneo
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.TournamentData
+  nombre: Torneo de Mechas
+  plantel:
+  - {fileID: 11400000, guid: 735de86e2d34f0d40a23fb96d6358209, type: 2}
+  - {fileID: 11400000, guid: a6ea10b2e2d74a248814a534036fd1ce, type: 2}
+  - {fileID: 11400000, guid: 6d618cf71f6f45a4fbf505601c095d29, type: 2}
+  - {fileID: 11400000, guid: cfc60eb5a287a0348a09fc11d1cc97e0, type: 2}
+  tamanoEquipo: 3
+  peleas:
+  - {fileID: 11400000, guid: 83be99b5100da224da708e762098cf20, type: 2}
+  - {fileID: 11400000, guid: 031bb0901e8da6e4bac8cd3474047f4c, type: 2}
+  - {fileID: 11400000, guid: 6d4b6af7e282007408f8f91d0127f601, type: 2}
+  inventarioInicial:
+  - item: {fileID: 11400000, guid: db2d713f60a9f9c47b0d4ec24aa3cecd, type: 2}
+    cantidad: 4
+  - item: {fileID: 11400000, guid: 5ac0ff11bf1be904a9cbb98108ed8ed8, type: 2}
+    cantidad: 3
+  - item: {fileID: 11400000, guid: aec242c2ae26be44c963af80f2918e17, type: 2}
+    cantidad: 2
+  - item: {fileID: 11400000, guid: 99761ef59c0818a438adc36684e8f76c, type: 2}
+    cantidad: 2
+  velocidadBatalla: 1.2

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8bf63601393a84bb11ca7bf269863e, type: 3}
+  m_Name: RIV_CromoLanza
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.RobotData
+  nombre: Cromo Lanza
+  rol: 1
+  descripcion: 
+  retrato: {fileID: 0}
+  modelo: {fileID: 0}
+  escala: 1
+  colorPrincipal: {r: 0.75, g: 0.78, b: 0.82, a: 1}
+  animatorController: {fileID: 0}
+  stats:
+    fuerza: 22
+    agilidad: 17
+    vitalidad: 20
+    magia: 10
+    defensa: 12
+  energiaMax: 45
+  ataqueBasico: {fileID: 11400000, guid: 9596a65d1f45e2040a2cbbea653b3501, type: 2}
+  habilidades:
+  - {fileID: 11400000, guid: e2caff287bb5e064a96cebb9224f4e20, type: 2}
+  - {fileID: 11400000, guid: 97492178e43362042be49859724f5ed8, type: 2}
+  overdrive: {fileID: 0}
+  azarIA: 0.25
+  fases: []

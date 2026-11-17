@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8bf63601393a84bb11ca7bf269863e, type: 3}
+  m_Name: ROB_Nova
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.RobotData
+  nombre: Nova
+  rol: 2
+  descripcion: "Artillero. M\xF3dulos de energ\xEDa y estados alterados."
+  retrato: {fileID: 0}
+  modelo: {fileID: 0}
+  escala: 0.95
+  colorPrincipal: {r: 0.65, g: 0.3, b: 0.95, a: 1}
+  animatorController: {fileID: 0}
+  stats:
+    fuerza: 8
+    agilidad: 14
+    vitalidad: 16
+    magia: 26
+    defensa: 8
+  energiaMax: 90
+  ataqueBasico: {fileID: 11400000, guid: 02373f362ee5cdf43a22e553a36794d3, type: 2}
+  habilidades:
+  - {fileID: 11400000, guid: 455cd9b1e090b094daa0a868f539b6e3, type: 2}
+  - {fileID: 11400000, guid: 200694d5de1aa8d45afb7cd6d746a576, type: 2}
+  - {fileID: 11400000, guid: f58b489fabab5b446b3565428ecb7497, type: 2}
+  overdrive: {fileID: 11400000, guid: cdafa91a01a7f37469b15f0f78cb30aa, type: 2}
+  azarIA: 0.25
+  fases: []

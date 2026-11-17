@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7d80f518fdeb2c4f9b14435026f5d2b, type: 3}
+  m_Name: HAB_Misiles
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
+  nombre: Lluvia de misiles
+  descripcion: 
+  icono: {fileID: 0}
+  objetivo: 2
+  recuperacion: 1.3
+  efectos:
+  - tipo: 0
+    potencia: 0.7
+    valorFijo: 0
+    modificador:
+      stat: 0
+      porcentaje: 0
+    duracion: 15
+    estado: {fileID: 0}
+    probabilidad: 1
+  - tipo: 6
+    potencia: 1
+    valorFijo: 0
+    modificador:
+      stat: 0
+      porcentaje: 0
+    duracion: 15
+    estado: {fileID: 11400000, guid: 3d47b40b5434679429958009bfa76b8a, type: 2}
+    probabilidad: 0.35
+  animacion: 1
+  cuerpoACuerpo: 0
+  colorEfecto: {r: 1, g: 0.55, b: 0.15, a: 1}
+  vfxLanzamiento: {fileID: 0}
+  vfxImpacto: {fileID: 0}
+  sfxLanzamiento: {fileID: 0}
+  sfxImpacto: {fileID: 0}
+  esCinematica: 0
+  duracionCinematica: 2.5
+  costoEnergia: 20
+  esOverdrive: 0

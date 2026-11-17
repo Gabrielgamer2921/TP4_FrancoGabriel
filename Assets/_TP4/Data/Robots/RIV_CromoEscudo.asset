@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8bf63601393a84bb11ca7bf269863e, type: 3}
+  m_Name: RIV_CromoEscudo
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.RobotData
+  nombre: Cromo Escudo
+  rol: 0
+  descripcion: 
+  retrato: {fileID: 0}
+  modelo: {fileID: 0}
+  escala: 1.1
+  colorPrincipal: {r: 0.6, g: 0.65, b: 0.75, a: 1}
+  animatorController: {fileID: 0}
+  stats:
+    fuerza: 14
+    agilidad: 9
+    vitalidad: 28
+    magia: 10
+    defensa: 20
+  energiaMax: 50
+  ataqueBasico: {fileID: 11400000, guid: 9596a65d1f45e2040a2cbbea653b3501, type: 2}
+  habilidades:
+  - {fileID: 11400000, guid: c2d0d0af710a6f64dbe24b1c7c20ea8d, type: 2}
+  - {fileID: 11400000, guid: f414191f31c7eea4da9e189e99eb36f2, type: 2}
+  overdrive: {fileID: 0}
+  azarIA: 0.25
+  fases: []

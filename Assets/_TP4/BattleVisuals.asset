@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1459289d641fe7145a25fdee560a6f86, type: 3}
+  m_Name: BattleVisuals
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.BattleVisuals
+  materialPlaceholder: {fileID: 2100000, guid: 877eb8f893e763b4f8fd6f2765007f90, type: 2}
+  materialEmisivo: {fileID: 2100000, guid: 00ea74ec8f31c5c43b69dab32b1e1f57, type: 2}
+  materialTrail: {fileID: 2100000, guid: 5b81f0649af20444aaa80681b91f2a93, type: 2}
+  materialPiso: {fileID: 2100000, guid: 364f4e432f579264caa97affb8e15725, type: 2}
+  fuente: {fileID: 0}
+  colorPanelArriba: {r: 0.16, g: 0.24, b: 0.72, a: 0.97}
+  colorPanelAbajo: {r: 0.03, g: 0.05, b: 0.28, a: 0.97}
+  colorBorde: {r: 0.85, g: 0.88, b: 0.95, a: 1}
+  sfxMover: {fileID: 0}
+  sfxConfirmar: {fileID: 0}
+  sfxCancelar: {fileID: 0}
+  sfxListo: {fileID: 0}
+  sfxGolpe: {fileID: 0}
+  sfxDisparo: {fileID: 0}
+  sfxCurar: {fileID: 0}
+  sfxEstado: {fileID: 0}
+  sfxMuerte: {fileID: 0}
+  sfxVictoria: {fileID: 0}
+  sfxDerrota: {fileID: 0}
+  sfxOverdrive: {fileID: 0}
+  musicaCombate: {fileID: 0}
+  musicaJefe: {fileID: 0}
+  volumenMusica: 0.5

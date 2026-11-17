@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8bf63601393a84bb11ca7bf269863e, type: 3}
+  m_Name: JEFE_Goliat
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.RobotData
+  nombre: "Goliat \u03A9"
+  rol: 4
+  descripcion: "Campe\xF3n invicto del torneo."
+  retrato: {fileID: 0}
+  modelo: {fileID: 0}
+  escala: 2.2
+  colorPrincipal: {r: 0.35, g: 0.32, b: 0.3, a: 1}
+  animatorController: {fileID: 0}
+  stats:
+    fuerza: 26
+    agilidad: 22
+    vitalidad: 80
+    magia: 22
+    defensa: 18
+  energiaMax: 300
+  ataqueBasico: {fileID: 11400000, guid: e5ee759e2de2a6e409807c29cf0bd930, type: 2}
+  habilidades:
+  - {fileID: 11400000, guid: e9279b3c8219b6845b0124a8dcd58de8, type: 2}
+  - {fileID: 11400000, guid: d510b249ad048f44f8d8adbe026173fa, type: 2}
+  overdrive: {fileID: 0}
+  azarIA: 0.25
+  fases: []

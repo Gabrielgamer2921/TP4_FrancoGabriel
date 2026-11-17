@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8bf63601393a84bb11ca7bf269863e, type: 3}
+  m_Name: ROB_Chispa
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.RobotData
+  nombre: Chispa
+  rol: 3
+  descripcion: "Mec\xE1nico. Repara, acelera y purga al equipo."
+  retrato: {fileID: 0}
+  modelo: {fileID: 0}
+  escala: 0.95
+  colorPrincipal: {r: 0.95, g: 0.75, b: 0.2, a: 1}
+  animatorController: {fileID: 0}
+  stats:
+    fuerza: 12
+    agilidad: 16
+    vitalidad: 18
+    magia: 20
+    defensa: 12
+  energiaMax: 80
+  ataqueBasico: {fileID: 11400000, guid: 02373f362ee5cdf43a22e553a36794d3, type: 2}
+  habilidades:
+  - {fileID: 11400000, guid: e2b25e9194603964ea22c2bb34798d2c, type: 2}
+  - {fileID: 11400000, guid: 481812e7a173f244dbda2b26294c2d14, type: 2}
+  - {fileID: 11400000, guid: a8ac77f9d0122684fb3bf3626fc0737d, type: 2}
+  overdrive: {fileID: 11400000, guid: 51012b75b717a4e49828e8aa7808e4d6, type: 2}
+  azarIA: 0.25
+  fases: []

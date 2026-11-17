@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8bf63601393a84bb11ca7bf269863e, type: 3}
+  m_Name: ROB_Bastion
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.RobotData
+  nombre: "Basti\xF3n"
+  rol: 0
+  descripcion: Tanque. Mucha vida y defensa; protege al equipo.
+  retrato: {fileID: 0}
+  modelo: {fileID: 0}
+  escala: 1.1
+  colorPrincipal: {r: 0.25, g: 0.45, b: 0.95, a: 1}
+  animatorController: {fileID: 0}
+  stats:
+    fuerza: 16
+    agilidad: 8
+    vitalidad: 30
+    magia: 10
+    defensa: 22
+  energiaMax: 50
+  ataqueBasico: {fileID: 11400000, guid: 9596a65d1f45e2040a2cbbea653b3501, type: 2}
+  habilidades:
+  - {fileID: 11400000, guid: c2d0d0af710a6f64dbe24b1c7c20ea8d, type: 2}
+  - {fileID: 11400000, guid: f414191f31c7eea4da9e189e99eb36f2, type: 2}
+  - {fileID: 11400000, guid: e4bc2cf3e2467c74c96229f68dd543a2, type: 2}
+  overdrive: {fileID: 11400000, guid: 353b4315de3b30745ab6c2d6222603e3, type: 2}
+  azarIA: 0.25
+  fases: []

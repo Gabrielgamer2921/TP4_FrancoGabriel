@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 229d5aa7a98bdc3438de42bb06ee1c54, type: 3}
+  m_Name: ITEM_Bomba
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.ItemData
+  nombre: Bomba
+  descripcion: "70 de da\xF1o a todos los enemigos y \u221220% Defensa por 15 s."
+  icono: {fileID: 0}
+  objetivo: 2
+  recuperacion: 0.8
+  efectos:
+  - tipo: 2
+    potencia: 0
+    valorFijo: 70
+    modificador:
+      stat: 0
+      porcentaje: 0
+    duracion: 15
+    estado: {fileID: 0}
+    probabilidad: 1
+  - tipo: 5
+    potencia: 1
+    valorFijo: 0
+    modificador:
+      stat: 4
+      porcentaje: -0.2
+    duracion: 15
+    estado: {fileID: 0}
+    probabilidad: 1
+  animacion: 3
+  cuerpoACuerpo: 0
+  colorEfecto: {r: 1, g: 0.55, b: 0.15, a: 1}
+  vfxLanzamiento: {fileID: 0}
+  vfxImpacto: {fileID: 0}
+  sfxLanzamiento: {fileID: 0}
+  sfxImpacto: {fileID: 0}
+  esCinematica: 0
+  duracionCinematica: 2.5
+  maximoEnInventario: 9
