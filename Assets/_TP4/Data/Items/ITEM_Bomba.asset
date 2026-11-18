@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.ItemData
   nombre: Bomba
   descripcion: "70 de da\xF1o a todos los enemigos y \u221220% Defensa por 15 s."
+  nombreEN: Bomb
+  descripcionEN: "70 damage to all enemies and \u221220% Defense for 15 s."
   icono: {fileID: 0}
   objetivo: 2
   recuperacion: 0.8

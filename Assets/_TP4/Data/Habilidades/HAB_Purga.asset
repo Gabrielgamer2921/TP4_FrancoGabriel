@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Purga
   descripcion: Quita estados alterados y debuffs de un aliado.
+  nombreEN: Purge
+  descripcionEN: Removes status ailments and debuffs from an ally.
   icono: {fileID: 0}
   objetivo: 1
   recuperacion: 0.8

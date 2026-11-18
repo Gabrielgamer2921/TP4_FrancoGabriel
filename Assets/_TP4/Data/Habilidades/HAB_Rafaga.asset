@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: "R\xE1faga"
   descripcion: "Golpe d\xE9bil pero muy r\xE1pido de recuperar."
+  nombreEN: Flurry
+  descripcionEN: Weak hit, but very quick to recover.
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 0.55

@@ -10,6 +10,8 @@ namespace TP4
         public string nombre = "Estado";
         [Tooltip("Texto corto que aparece en la UI (ej: QUE, PAR, COR).")]
         public string abreviatura = "EST";
+        public string nombreEN;
+        public string abreviaturaEN;
         public Sprite icono;
         public Color color = Color.red;
 
@@ -31,5 +33,8 @@ namespace TP4
         [Header("Presentación")]
         public GameObject vfxLoop;
         public AudioClip sfxAplicar;
+
+        public string Nombre => Loc.Elegir(nombre, nombreEN);
+        public string Abreviatura => Loc.Elegir(abreviatura, abreviaturaEN);
     }
 }

@@ -9,6 +9,9 @@ namespace TP4
         [Header("General")]
         public string nombre = "Acción";
         [TextArea(2, 4)] public string descripcion;
+        [Tooltip("Nombre en inglés (si está vacío se usa el español).")]
+        public string nombreEN;
+        [TextArea(2, 4)] public string descripcionEN;
         public Sprite icono;
         public TargetMode objetivo = TargetMode.EnemigoUnico;
 
@@ -32,6 +35,9 @@ namespace TP4
         public bool esCinematica = false;
         [Tooltip("Duración de la toma de cámara antes del impacto.")]
         public float duracionCinematica = 2.5f;
+
+        public string Nombre => Loc.Elegir(nombre, nombreEN);
+        public string Descripcion => Loc.Elegir(descripcion, descripcionEN);
 
         public bool ApuntaAEnemigos => objetivo == TargetMode.EnemigoUnico || objetivo == TargetMode.TodosEnemigos;
         public bool EsMultiObjetivo => objetivo == TargetMode.TodosEnemigos || objetivo == TargetMode.TodosAliados;

@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: "L\xE1ser de barrido"
   descripcion: 
+  nombreEN: Sweeping laser
+  descripcionEN: 
   icono: {fileID: 0}
   objetivo: 2
   recuperacion: 1.2

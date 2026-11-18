@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.EncounterData
   nombre: Final
   nombreRival: "Goliat \u03A9"
+  nombreEN: Final
+  nombreRivalEN: "Goliath \u03A9"
   enemigos:
   - {fileID: 11400000, guid: dfbbc3e0f30ad8343a009d61bb494630, type: 2}
   esJefe: 1

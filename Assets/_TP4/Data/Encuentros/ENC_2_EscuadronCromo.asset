@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.EncounterData
   nombre: Semifinal
   nombreRival: "Escuadr\xF3n Cromo"
+  nombreEN: Semifinal
+  nombreRivalEN: Chrome Squad
   enemigos:
   - {fileID: 11400000, guid: 90120ea5024fed34a844a42d96421bee, type: 2}
   - {fileID: 11400000, guid: 59de87b52bba98f459b044b5e8980b46, type: 2}

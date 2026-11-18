@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.EncounterData
   nombre: Ronda 1
   nombreRival: Los Chatarreros
+  nombreEN: Round 1
+  nombreRivalEN: The Scrappers
   enemigos:
   - {fileID: 11400000, guid: e6b3a44db4301c5438400f69cfbc3fb7, type: 2}
   - {fileID: 11400000, guid: 8ff4a5e8f6794c947893d6a099588e48, type: 2}

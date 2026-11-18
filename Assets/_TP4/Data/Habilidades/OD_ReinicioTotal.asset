@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Reinicio total
   descripcion: "Cura a todo el equipo, limpia estados y recarga energ\xEDa."
+  nombreEN: Full reboot
+  descripcionEN: Heals the whole team, removes ailments and restores energy.
   icono: {fileID: 0}
   objetivo: 3
   recuperacion: 0.8

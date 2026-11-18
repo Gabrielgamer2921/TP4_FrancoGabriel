@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.ItemData
   nombre: "N\xFAcleo de energ\xEDa"
   descripcion: Recupera 150 de vida a un aliado.
+  nombreEN: Energy core
+  descripcionEN: Restores 150 HP to an ally.
   icono: {fileID: 0}
   objetivo: 1
   recuperacion: 0.8

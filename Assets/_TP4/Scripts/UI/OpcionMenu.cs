@@ -9,12 +9,14 @@ namespace TP4
     /// Opción de un menú navegable con teclado, joystick o mouse.
     /// Muestra el puntero "▶" al estar seleccionada y reenvía Cancelar.
     /// </summary>
-    public class OpcionMenu : MonoBehaviour, ISelectHandler, IDeselectHandler, ICancelHandler, IPointerEnterHandler
+    public class OpcionMenu : MonoBehaviour, ISelectHandler, IDeselectHandler, ICancelHandler, IPointerEnterHandler, IMoveHandler
     {
         public Text texto;
         public Text puntero;
         public Action alSeleccionar;
         public Action alCancelar;
+        /// <summary>Opciones con valor (volumen, idioma...): izquierda = -1, derecha = +1.</summary>
+        public Action<int> alMoverHorizontal;
         public bool silenciosa;
 
         public void OnSelect(BaseEventData eventData)
@@ -33,6 +35,13 @@ namespace TP4
         public void OnCancel(BaseEventData eventData)
         {
             alCancelar?.Invoke();
+        }
+
+        public void OnMove(AxisEventData eventData)
+        {
+            if (alMoverHorizontal == null) return;
+            if (eventData.moveDir == MoveDirection.Left) alMoverHorizontal(-1);
+            else if (eventData.moveDir == MoveDirection.Right) alMoverHorizontal(+1);
         }
 
         // Con mouse: pasar por encima selecciona (así el teclado y el mouse conviven).

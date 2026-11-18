@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: "Pu\xF1o s\xEDsmico"
   descripcion: 
+  nombreEN: Seismic punch
+  descripcionEN: 
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1

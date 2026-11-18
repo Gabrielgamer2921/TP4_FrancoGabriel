@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Reparar
   descripcion: Recupera vida de un aliado.
+  nombreEN: Repair
+  descripcionEN: Restores an ally's HP.
   icono: {fileID: 0}
   objetivo: 1
   recuperacion: 0.9

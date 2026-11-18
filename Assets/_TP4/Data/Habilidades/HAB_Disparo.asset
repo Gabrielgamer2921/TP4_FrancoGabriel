@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Disparo
   descripcion: "Disparo b\xE1sico a distancia."
+  nombreEN: Shot
+  descripcionEN: Basic ranged shot.
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1

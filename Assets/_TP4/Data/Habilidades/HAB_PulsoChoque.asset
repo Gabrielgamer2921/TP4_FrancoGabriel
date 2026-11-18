@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Pulso de choque
   descripcion: "Da\xF1o de energ\xEDa que adem\xE1s retrasa la ATB del objetivo."
+  nombreEN: Shock pulse
+  descripcionEN: Energy damage that also delays the target's ATB.
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1

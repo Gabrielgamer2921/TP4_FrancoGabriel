@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Golpe
   descripcion: "Ataque cuerpo a cuerpo b\xE1sico."
+  nombreEN: Strike
+  descripcionEN: Basic melee attack.
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1

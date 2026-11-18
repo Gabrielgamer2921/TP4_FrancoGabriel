@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.StatusData
   nombre: "Corrosi\xF3n"
   abreviatura: COR
+  nombreEN: Corrosion
+  abreviaturaEN: COR
   icono: {fileID: 0}
   color: {r: 0.45, g: 1, b: 0.35, a: 1}
   duracion: 12

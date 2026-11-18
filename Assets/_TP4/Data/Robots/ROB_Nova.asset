@@ -15,6 +15,7 @@ MonoBehaviour:
   nombre: Nova
   rol: 2
   descripcion: "Artillero. M\xF3dulos de energ\xEDa y estados alterados."
+  descripcionEN: Artillery. Energy modules and status ailments.
   retrato: {fileID: 0}
   modelo: {fileID: 0}
   escala: 0.95

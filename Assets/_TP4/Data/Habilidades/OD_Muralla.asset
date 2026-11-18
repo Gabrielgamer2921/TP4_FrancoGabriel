@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Muralla
   descripcion: Todo el equipo gana +60% de Defensa y recupera algo de vida.
+  nombreEN: Bulwark
+  descripcionEN: The whole team gains +60% Defense and recovers some HP.
   icono: {fileID: 0}
   objetivo: 3
   recuperacion: 0.8

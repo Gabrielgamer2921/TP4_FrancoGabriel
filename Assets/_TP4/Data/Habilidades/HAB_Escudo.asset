@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Escudo
   descripcion: +50% de Defensa a un aliado durante 20 s.
+  nombreEN: Shield
+  descripcionEN: +50% Defense to an ally for 20 s.
   icono: {fileID: 0}
   objetivo: 1
   recuperacion: 1

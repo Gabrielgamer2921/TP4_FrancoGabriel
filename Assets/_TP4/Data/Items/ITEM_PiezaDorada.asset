@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.ItemData
   nombre: Pieza dorada
   descripcion: +30% de Fuerza a un aliado durante 25 s.
+  nombreEN: Golden part
+  descripcionEN: +30% Strength to an ally for 25 s.
   icono: {fileID: 0}
   objetivo: 1
   recuperacion: 0.8

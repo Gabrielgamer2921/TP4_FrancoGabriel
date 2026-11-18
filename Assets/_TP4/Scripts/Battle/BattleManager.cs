@@ -32,8 +32,8 @@ namespace TP4
         [SerializeField] BattleCamera camara;
 
         [Header("Flujo")]
-        [Tooltip("Escena de selección de equipo (si no está en Build Settings, se reinicia el torneo con el equipo actual).")]
-        [SerializeField] string escenaSeleccion = "SeleccionEquipo";
+        [Tooltip("Escena del menú principal (debe estar en Build Settings).")]
+        [SerializeField] string escenaMenu = "MenuPrincipal";
 
         public readonly List<BattleUnit> Jugadores = new List<BattleUnit>();
         public readonly List<BattleUnit> Enemigos = new List<BattleUnit>();
@@ -45,6 +45,41 @@ namespace TP4
 
         public BattlePhase Fase { get; private set; } = BattlePhase.Intro;
         public bool PausaCinematica { get; private set; }
+
+        /// <summary>
+        /// true = ATB desactivada: combate por turnos clásico (estilo The 7th Saga).
+        /// Primero actúa todo tu equipo y después todos los rivales, sin barras ni apuro.
+        /// Se fija al empezar cada pelea.
+        /// </summary>
+        public bool ModoTurnos { get; private set; }
+
+        /// <summary>Modo por turnos: de quién es la fase actual.</summary>
+        public Team FaseDe { get; private set; } = Team.Jugador;
+
+        /// <summary>Modo por turnos: cuántos "segundos" de estados/buffs pasan por cada turno.</summary>
+        const float SegundosPorTurno = 3f;
+
+        /// <summary>
+        /// ¿Está detenido el tiempo de la ATB? Depende del modo elegido:
+        /// Activo = solo en cinemáticas; Espera = además en submenús y durante las animaciones;
+        /// Clásico = además siempre que haya un robot tuyo esperando una orden.
+        /// </summary>
+        public bool TiempoDetenido
+        {
+            get
+            {
+                if (PausaCinematica) return true;
+                switch (GameSession.ModoATB)
+                {
+                    case ModoATB.Espera:
+                        return ejecutando || (UI != null && UI.EnSubmenu);
+                    case ModoATB.Clasico:
+                        return ejecutando || ListosJugador.Count > 0 || (UI != null && UI.EsperandoOrden);
+                    default:
+                        return false;
+                }
+            }
+        }
         public BattleUI UI { get; private set; }
         public EncounterData Encuentro { get; private set; }
         public BattleVisuals Visuales => visuales;
@@ -61,6 +96,11 @@ namespace TP4
 
         void Start()
         {
+#if UNITY_EDITOR
+            // Red de seguridad en el editor: si falta la referencia, buscar los assets en el proyecto.
+            if (torneo == null) torneo = BuscarAsset<TournamentData>();
+            if (visuales == null) visuales = BuscarAsset<BattleVisuals>();
+#endif
             if (torneo == null)
             {
                 Debug.LogError("[TP4] BattleManager no tiene TournamentData asignado. Usá el menú TP4 > Crear contenido y escena.");
@@ -70,7 +110,6 @@ namespace TP4
             if (camara == null && Camera.main != null) camara = Camera.main.GetComponent<BattleCamera>();
 
             GameSession.AsegurarIniciada(torneo);
-            GameSession.GuardarInicioPelea();
             Encuentro = GameSession.PeleaData;
             if (Encuentro == null)
             {
@@ -79,10 +118,15 @@ namespace TP4
                 return;
             }
 
+            Time.timeScale = 1f;
+            ModoTurnos = !Ajustes.ATBActivo;
             Sfx.Crear(visuales);
             CrearUnidades();
+            if (ModoTurnos)
+                foreach (var u in Todas()) { u.ATB = 0f; u.State = UnitState.Cargando; }
             UI = BattleUI.Crear(this, visuales);
-            UI.SetRonda($"Ronda {GameSession.PeleaActual + 1}/{torneo.peleas.Count}  ·  vs {Encuentro.nombreRival}");
+            PauseMenu.Crear(this, visuales);
+            RefrescarTextos();
 
             var musica = Encuentro.musica != null ? Encuentro.musica
                 : visuales != null ? (Encuentro.esJefe ? visuales.musicaJefe : visuales.musicaCombate) : null;
@@ -91,15 +135,116 @@ namespace TP4
             StartCoroutine(Intro());
         }
 
+        /// <summary>Textos que dependen del idioma (se llama también al cambiar de idioma).</summary>
+        public void RefrescarTextos()
+        {
+            if (UI == null || Encuentro == null) return;
+            UI.SetRonda(Loc.T("ui.ronda", GameSession.PeleaActual + 1, torneo.peleas.Count, Encuentro.NombreRival,
+                Loc.NombreDificultad(GameSession.Dificultad)));
+        }
+
         IEnumerator Intro()
         {
             Fase = BattlePhase.Intro;
             yield return new WaitForSeconds(0.3f);
-            string titulo = Encuentro.esJefe ? $"¡PELEA FINAL!\n<size=40>{Encuentro.nombreRival}</size>" : $"{Encuentro.nombre}\n<size=40>vs {Encuentro.nombreRival}</size>";
+            string titulo = Encuentro.esJefe
+                ? $"{Loc.T("msg.peleaFinal")}\n<size=40>{Encuentro.NombreRival}</size>"
+                : $"{Encuentro.Nombre}\n<size=40>vs {Encuentro.NombreRival}</size>";
             UI.Banner(titulo, 1.6f, Encuentro.esJefe ? new Color(1f, 0.45f, 0.35f) : Color.white);
             yield return new WaitForSeconds(2.1f);
             Fase = BattlePhase.EnCurso;
+            if (ModoTurnos) StartCoroutine(BucleTurnos());
         }
+
+        // ---------------------------------------------------------------------
+        // Modo por turnos (ATB desactivada)
+        // ---------------------------------------------------------------------
+        IEnumerator BucleTurnos()
+        {
+            while (Fase == BattlePhase.EnCurso)
+            {
+                yield return FaseDeEquipo(Team.Jugador);
+                if (Fase != BattlePhase.EnCurso) yield break;
+                yield return FaseDeEquipo(Team.Enemigo);
+            }
+        }
+
+        IEnumerator FaseDeEquipo(Team equipo)
+        {
+            FaseDe = equipo;
+            var orden = Vivos(equipo);
+            // Dentro de la fase, el más ágil actúa primero.
+            orden.Sort((a, b) => b.GetStat(StatType.Agilidad).CompareTo(a.GetStat(StatType.Agilidad)));
+            foreach (var u in orden) { u.ATB = 1f; u.NotificarCambio(); }
+
+            UI.Banner(Loc.T(equipo == Team.Jugador ? "turno.jugador" : "turno.enemigo"), 0.7f,
+                equipo == Team.Jugador ? new Color(0.5f, 0.9f, 1f) : new Color(1f, 0.55f, 0.5f));
+            yield return new WaitForSeconds(1.1f);
+
+            foreach (var u in orden)
+            {
+                if (Fase != BattlePhase.EnCurso) yield break;
+                if (!u.IsAlive) continue;
+                yield return TurnoDe(u);
+                u.ATB = 0f;
+                u.NotificarCambio();
+                yield return new WaitForSeconds(equipo == Team.Enemigo ? 0.35f : 0.15f);
+            }
+            foreach (var u in DeEquipo(equipo)) u.ATB = 0f;
+        }
+
+        IEnumerator TurnoDe(BattleUnit u)
+        {
+            // Los estados avanzan al empezar el turno (la quemadura puede rematarlo).
+            u.AvanzarTurno(SegundosPorTurno);
+            if (!u.IsAlive || Fase != BattlePhase.EnCurso) yield break;
+
+            // La parálisis le hace perder el turno.
+            if (u.ATBCongelada)
+            {
+                UI.Popup(u, Loc.T("msg.pierdeTurno"), new Color(1f, 0.95f, 0.3f), 30);
+                yield return new WaitForSeconds(0.7f);
+                yield break;
+            }
+
+            bool repetir = true;
+            while (repetir && u.IsAlive && Fase == BattlePhase.EnCurso)
+            {
+                repetir = false;
+                if (u.EsJugador)
+                {
+                    u.State = UnitState.Listo;
+                    if (!ListosJugador.Contains(u)) ListosJugador.Add(u);
+                    // Esperar a que el jugador elija (la UI encola la acción).
+                    while (u.IsAlive && u.State == UnitState.Listo && Fase == BattlePhase.EnCurso) yield return null;
+                }
+                else
+                {
+                    var req = EnemyAI.Decidir(u, this);
+                    if (req == null) yield break;
+                    Encolar(req);
+                }
+
+                // Esperar a que se ejecute.
+                while (Fase == BattlePhase.EnCurso && (cola.Count > 0 || ejecutando)) yield return null;
+                if (u.State != UnitState.Muerto) u.State = UnitState.Cargando;
+
+                if (u.AccionExtra && u.IsAlive)
+                {
+                    u.AccionExtra = false;
+                    repetir = true;
+                }
+            }
+        }
+
+#if UNITY_EDITOR
+        static T BuscarAsset<T>() where T : Object
+        {
+            var guids = UnityEditor.AssetDatabase.FindAssets("t:" + typeof(T).Name);
+            if (guids.Length == 0) return null;
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]));
+        }
+#endif
 
         // ---------------------------------------------------------------------
         // Creación
@@ -130,13 +275,14 @@ namespace TP4
 
             var unit = go.AddComponent<BattleUnit>();
             var view = go.AddComponent<UnitView>();
-            unit.Init(data, team, slot, view);
+            // La dificultad escala las stats de los rivales.
+            unit.Init(data, team, slot, view, team == Team.Enemigo ? GameSession.MultiplicadorRivales : 1f);
             view.Construir(unit, visuales);
 
             unit.Died += AlMorir;
             unit.PhaseTriggered += (u, fase) =>
             {
-                UI.Banner(fase.mensaje, 1.4f, new Color(1f, 0.4f, 0.3f));
+                UI.Banner(fase.Mensaje, 1.4f, new Color(1f, 0.4f, 0.3f));
                 if (camara != null) camara.Shake(0.3f, 0.5f);
                 Sfx.Play(SfxId.Overdrive, 0.8f, 0.7f);
             };
@@ -150,7 +296,7 @@ namespace TP4
         {
             if (Fase != BattlePhase.EnCurso) return;
 
-            if (!PausaCinematica)
+            if (!ModoTurnos && !TiempoDetenido)
             {
                 float dt = Time.deltaTime;
                 float velocidad = torneo.velocidadBatalla;
@@ -234,7 +380,7 @@ namespace TP4
 
             Color colorNombre = actor.EsJugador ? Color.white : new Color(1f, 0.6f, 0.55f);
             if (hab != null && hab.esOverdrive) colorNombre = new Color(1f, 0.85f, 0.2f);
-            UI.AnunciarAccion(req.Item != null ? $"{actor.Nombre}: {accion.nombre}" : accion.nombre, colorNombre);
+            UI.AnunciarAccion(req.Item != null ? $"{actor.Nombre}: {accion.Nombre}" : accion.Nombre, colorNombre);
 
             bool cine = accion.esCinematica;
             if (cine)
@@ -383,7 +529,7 @@ namespace TP4
             Sfx.PararMusica();
             Sfx.Play(SfxId.Victoria);
             foreach (var u in Jugadores) u.View.Victoria();
-            UI.Banner(GameSession.EsUltimaPelea ? "¡CAMPEÓN!" : "¡VICTORIA!", 1.5f, new Color(1f, 0.9f, 0.4f));
+            UI.Banner(GameSession.EsUltimaPelea ? Loc.T("msg.campeon") : Loc.T("msg.victoria"), 1.5f, new Color(1f, 0.9f, 0.4f));
             yield return new WaitForSeconds(2f);
             UI.MostrarFin(true, GameSession.EsUltimaPelea);
         }
@@ -396,33 +542,29 @@ namespace TP4
             yield return new WaitForSeconds(0.8f);
             Sfx.PararMusica();
             Sfx.Play(SfxId.Derrota);
-            UI.Banner("DERROTA", 1.5f, new Color(1f, 0.4f, 0.4f));
+            UI.Banner(Loc.T("msg.derrota"), 1.5f, new Color(1f, 0.4f, 0.4f));
             yield return new WaitForSeconds(2f);
             UI.MostrarFin(false, false);
         }
 
-        // Llamados desde los botones del panel de fin
+        // Llamados desde los botones del panel de fin / pausa
         public void Continuar()
         {
             if (GameSession.AvanzarPelea()) RecargarEscena();
-            else VolverAlInicio();
+            else VolverAlMenu();
         }
 
-        public void Reintentar()
+        /// <summary>Sin guardado: volver al menú borra todo el progreso del torneo.</summary>
+        public void VolverAlMenu()
         {
-            GameSession.RestaurarInicioPelea();
-            RecargarEscena();
-        }
-
-        public void VolverAlInicio()
-        {
-            if (!string.IsNullOrEmpty(escenaSeleccion) && Application.CanStreamedLevelBeLoaded(escenaSeleccion))
+            GameSession.Terminar();
+            Time.timeScale = 1f;
+            if (!string.IsNullOrEmpty(escenaMenu) && Application.CanStreamedLevelBeLoaded(escenaMenu))
             {
-                SceneManager.LoadScene(escenaSeleccion);
+                SceneManager.LoadScene(escenaMenu);
                 return;
             }
-            // Sin escena de selección: reiniciar el torneo con el mismo equipo.
-            GameSession.NuevoTorneo(torneo, GameSession.Equipo);
+            Debug.LogWarning($"[TP4] La escena '{escenaMenu}' no está en Build Settings. Se reinicia el combate.");
             RecargarEscena();
         }
 
@@ -435,6 +577,12 @@ namespace TP4
         // Consultas
         // ---------------------------------------------------------------------
         public List<BattleUnit> DeEquipo(Team t) => t == Team.Jugador ? Jugadores : Enemigos;
+
+        public IEnumerable<BattleUnit> Todas()
+        {
+            foreach (var u in Jugadores) yield return u;
+            foreach (var u in Enemigos) yield return u;
+        }
 
         public List<BattleUnit> Vivos(Team t)
         {

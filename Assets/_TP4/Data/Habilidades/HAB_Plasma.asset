@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Plasma
   descripcion: "Da\xF1o de energ\xEDa con 80% de causar Quemadura."
+  nombreEN: Plasma
+  descripcionEN: Energy damage with an 80% chance to Burn.
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1.1

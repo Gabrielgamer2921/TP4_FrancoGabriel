@@ -21,6 +21,7 @@ namespace TP4.EditorTools
         const string Raiz = "Assets/_TP4";
         const string Datos = Raiz + "/Data";
         const string Escena = Raiz + "/Scenes/Combate.unity";
+        const string EscenaMenu = Raiz + "/Scenes/MenuPrincipal.unity";
 
         [MenuItem("TP4/1. Crear contenido y escena de combate", priority = 1)]
         public static void CrearTodo()
@@ -28,9 +29,15 @@ namespace TP4.EditorTools
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
             CrearCarpetas();
-            var vis = CrearVisuales();
-            var torneo = CrearDatos();
-            CrearEscena(torneo, vis);
+            CrearVisuales();
+            CrearDatos();
+            // Guardar ANTES de crear la escena: NewScene descarga los assets en memoria
+            // y las referencias (y cambios sin guardar) se perderían.
+            AssetDatabase.SaveAssets();
+            CrearEscena();
+            CrearEscenaMenu();
+            ConfigurarBuild();
+            EditorSceneManager.OpenScene(EscenaMenu);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[TP4] Listo: contenido y escena de combate creados. Dale Play en " + Escena);
@@ -44,6 +51,13 @@ namespace TP4.EditorTools
                     "Regenerar", "Cancelar")) return;
             AssetDatabase.DeleteAsset(Datos);
             CrearTodo();
+        }
+
+        [MenuItem("TP4/4. Abrir menú principal", priority = 4)]
+        public static void AbrirMenu()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                EditorSceneManager.OpenScene(EscenaMenu);
         }
 
         [MenuItem("TP4/3. Abrir escena de combate", priority = 3)]
@@ -169,6 +183,39 @@ namespace TP4.EditorTools
                 it.colorEfecto = color;
                 it.efectos = new List<ActionEffect>(efectos);
             });
+        }
+
+        // ---------- Traducciones ----------
+        static void EN(ActionData a, string nombreEN, string descEN)
+        {
+            if (a == null) return;
+            bool cambio = false;
+            if (string.IsNullOrEmpty(a.nombreEN)) { a.nombreEN = nombreEN; cambio = true; }
+            if (string.IsNullOrEmpty(a.descripcionEN) && !string.IsNullOrEmpty(descEN)) { a.descripcionEN = descEN; cambio = true; }
+            if (cambio) EditorUtility.SetDirty(a);
+        }
+
+        static void ENEstado(StatusData e, string nombreEN, string abrevEN)
+        {
+            if (e == null || !string.IsNullOrEmpty(e.nombreEN)) return;
+            e.nombreEN = nombreEN;
+            e.abreviaturaEN = abrevEN;
+            EditorUtility.SetDirty(e);
+        }
+
+        static void ENRobot(RobotData r, string descEN)
+        {
+            if (r == null || !string.IsNullOrEmpty(r.descripcionEN)) return;
+            r.descripcionEN = descEN;
+            EditorUtility.SetDirty(r);
+        }
+
+        static void ENEncuentro(EncounterData e, string nombreEN, string rivalEN)
+        {
+            if (e == null || !string.IsNullOrEmpty(e.nombreEN)) return;
+            e.nombreEN = nombreEN;
+            e.nombreRivalEN = rivalEN;
+            EditorUtility.SetDirty(e);
         }
 
         static RobotData Robot(string archivo, string nombre, RobotRole rol, string desc, Color color, Stats stats, int energia,
@@ -337,6 +384,51 @@ namespace TP4.EditorTools
                 EditorUtility.SetDirty(goliat);
             }
 
+            // ---------- Traducciones al inglés (solo se completan si están vacías) ----------
+            EN(golpe, "Strike", "Basic melee attack.");
+            EN(disparo, "Shot", "Basic ranged shot.");
+            EN(provocar, "Taunt", "Draws enemy attacks for 12 s and raises Defense.");
+            EN(escudo, "Shield", "+50% Defense to an ally for 20 s.");
+            EN(pulso, "Shock pulse", "Energy damage that also delays the target's ATB.");
+            EN(muralla, "Bulwark", "The whole team gains +60% Defense and recovers some HP.");
+            EN(cargado, "Charged strike", "Devastating blow. Takes longer to act again.");
+            EN(rafaga, "Flurry", "Weak hit, but very quick to recover.");
+            EN(plasma, "Plasma", "Energy damage with an 80% chance to Burn.");
+            EN(tormenta, "Steel storm", "A crushing barrage of blows on one enemy.");
+            EN(emp, "EMP blast", "Energy damage with a 70% chance to Paralyze (freezes ATB).");
+            EN(acido, "Acid rain", "Damages all enemies with a 60% chance of Corrosion (−Defense).");
+            EN(sobrecarga, "Overload", "Huge energy damage. Very slow recovery.");
+            EN(orbital, "Orbital cannon", "A beam from the sky that hits all enemies.");
+            EN(reparar, "Repair", "Restores an ally's HP.");
+            EN(overclock, "Overclock", "Fills most of an ally's ATB and raises their Agility.");
+            EN(purga, "Purge", "Removes status ailments and debuffs from an ally.");
+            EN(reinicio, "Full reboot", "Heals the whole team, removes ailments and restores energy.");
+            EN(puno, "Seismic punch", "");
+            EN(laser, "Sweeping laser", "");
+            EN(misiles, "Missile rain", "");
+            EN(empMasivo, "Mass EMP pulse", "");
+            EN(nucleo, "Overloaded core", "");
+            EN(nucleoEnergia, "Energy core", "Restores 150 HP to an ally.");
+            EN(celda, "Energy cell", "Restores 40 energy to an ally.");
+            EN(bomba, "Bomb", "70 damage to all enemies and −20% Defense for 15 s.");
+            EN(pieza, "Golden part", "+30% Strength to an ally for 25 s.");
+            ENEstado(quemadura, "Burn", "BRN");
+            ENEstado(paralisis, "Paralysis", "PAR");
+            ENEstado(corrosion, "Corrosion", "COR");
+            ENRobot(bastion, "Tank. High HP and defense; protects the team.");
+            ENRobot(vanguardia, "Assault. High and fast physical damage.");
+            ENRobot(nova, "Artillery. Energy modules and status ailments.");
+            ENRobot(chispa, "Mechanic. Repairs, speeds up and cleanses the team.");
+            ENRobot(goliat, "Undefeated tournament champion.");
+            if (goliat.fases != null && goliat.fases.Count >= 2)
+            {
+                if (string.IsNullOrEmpty(goliat.fases[0].mensajeEN) || goliat.fases[0].mensajeEN == "The boss is enraged!")
+                    goliat.fases[0].mensajeEN = "Goliath enters combat mode!";
+                if (string.IsNullOrEmpty(goliat.fases[1].mensajeEN) || goliat.fases[1].mensajeEN == "The boss is enraged!")
+                    goliat.fases[1].mensajeEN = "CORE AT THE LIMIT!";
+                EditorUtility.SetDirty(goliat);
+            }
+
             // ---------- Encuentros ----------
             var enc1 = Asset<EncounterData>($"{Datos}/Encuentros/ENC_1_Chatarreros.asset", e =>
             {
@@ -354,6 +446,10 @@ namespace TP4.EditorTools
                 e.enemigos = new List<RobotData> { goliat };
             });
 
+            ENEncuentro(enc1, "Round 1", "The Scrappers");
+            ENEncuentro(enc2, "Semifinal", "Chrome Squad");
+            ENEncuentro(enc3, "Final", "Goliath Ω");
+
             // ---------- Torneo ----------
             return Asset<TournamentData>($"{Datos}/Torneo.asset", t =>
             {
@@ -361,7 +457,7 @@ namespace TP4.EditorTools
                 t.plantel = new List<RobotData> { bastion, vanguardia, nova, chispa };
                 t.tamanoEquipo = 3;
                 t.peleas = new List<EncounterData> { enc1, enc2, enc3 };
-                t.velocidadBatalla = 1.2f;
+                t.velocidadBatalla = 1f;
                 t.inventarioInicial = new List<ItemStack>
                 {
                     new ItemStack { item = nucleoEnergia, cantidad = 4 },
@@ -375,10 +471,94 @@ namespace TP4.EditorTools
         // =====================================================================
         // Escena
         // =====================================================================
-        static void CrearEscena(TournamentData torneo, BattleVisuals vis)
+        static void CrearEscena()
         {
             var escena = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            // Recargar desde disco después de NewScene (las referencias anteriores quedan inválidas).
+            var torneo = AssetDatabase.LoadAssetAtPath<TournamentData>($"{Datos}/Torneo.asset");
+            var vis = AssetDatabase.LoadAssetAtPath<BattleVisuals>($"{Raiz}/BattleVisuals.asset");
+            if (torneo == null || vis == null)
+                Debug.LogError("[TP4] No se encontraron Torneo.asset o BattleVisuals.asset.");
+
+            ConstruirArena(vis);
+
+            // Spawns: jugador a la derecha (+X), enemigos a la izquierda (−X), estilo FF7.
+            var spawns = new GameObject("Spawns").transform;
+            var sj = new Transform[3];
+            var se = new Transform[3];
+            for (int i = 0; i < 3; i++)
+            {
+                sj[i] = Spawn("Jugador " + (i + 1), spawns, new Vector3(5f + i * 0.4f, 0, -3.2f + i * 3.2f), Vector3.left);
+                se[i] = Spawn("Enemigo " + (i + 1), spawns, new Vector3(-5f - i * 0.4f, 0, -3.2f + i * 3.2f), Vector3.right);
+            }
+            var sjefe = Spawn("Jefe", spawns, new Vector3(-6.5f, 0, 0), Vector3.right);
+
+            // Cámara
+            var battleCam = CrearCamara(new Vector3(10.5f, 6.2f, -8.5f), new Vector3(-0.5f, -0.6f, 0.4f), 42f);
+            CrearPostProceso();
+
+            // BattleManager
+            var bmGO = new GameObject("BattleManager");
+            var bm = bmGO.AddComponent<BattleManager>();
+            var so = new SerializedObject(bm);
+            so.FindProperty("torneo").objectReferenceValue = torneo;
+            so.FindProperty("visuales").objectReferenceValue = vis;
+            so.FindProperty("camara").objectReferenceValue = battleCam;
+            so.FindProperty("spawnJefe").objectReferenceValue = sjefe;
+            var pj = so.FindProperty("spawnsJugador");
+            var pe = so.FindProperty("spawnsEnemigo");
+            pj.arraySize = 3;
+            pe.arraySize = 3;
+            for (int i = 0; i < 3; i++)
+            {
+                pj.GetArrayElementAtIndex(i).objectReferenceValue = sj[i];
+                pe.GetArrayElementAtIndex(i).objectReferenceValue = se[i];
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.SaveScene(escena, Escena);
+        }
+
+        static void CrearEscenaMenu()
+        {
+            var escena = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var torneo = AssetDatabase.LoadAssetAtPath<TournamentData>($"{Datos}/Torneo.asset");
+            var vis = AssetDatabase.LoadAssetAtPath<BattleVisuals>($"{Raiz}/BattleVisuals.asset");
+
+            ConstruirArena(vis);
+
+            // Los 4 robots del plantel en fila, del lado derecho de la pantalla, mirando a cámara.
+            var robots = new GameObject("Robots del menú").transform;
+            var puntos = new Transform[4];
+            var posCamara = new Vector3(-0.5f, 2.4f, -8.5f);
+            for (int i = 0; i < 4; i++)
+            {
+                var pos = new Vector3(1.6f + i * 1.5f, 0, i % 2 == 0 ? -0.6f : 0.8f);
+                var aCamara = posCamara - pos;
+                aCamara.y = 0;
+                puntos[i] = Spawn("Robot " + (i + 1), robots, pos, aCamara.normalized);
+            }
+
+            CrearCamara(posCamara, new Vector3(0.8f, 1.3f, 0f), 40f);
+            CrearPostProceso();
+
+            var go = new GameObject("MainMenu");
+            var menu = go.AddComponent<MainMenu>();
+            var so = new SerializedObject(menu);
+            so.FindProperty("torneo").objectReferenceValue = torneo;
+            so.FindProperty("visuales").objectReferenceValue = vis;
+            var pr = so.FindProperty("puntosRobots");
+            pr.arraySize = puntos.Length;
+            for (int i = 0; i < puntos.Length; i++) pr.GetArrayElementAtIndex(i).objectReferenceValue = puntos[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.SaveScene(escena, EscenaMenu);
+        }
+
+        /// <summary>Iluminación y arena (compartida por el combate y el menú).</summary>
+        static void ConstruirArena(BattleVisuals vis)
+        {
             // Iluminación
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.35f, 0.4f, 0.6f);
@@ -403,7 +583,7 @@ namespace TP4.EditorTools
             var emisivoMagenta = Mat("MAT_NeonMagenta", "Universal Render Pipeline/Unlit", new Color(1f, 0.25f, 0.7f), true);
             var metal = Mat("MAT_Metal", "Universal Render Pipeline/Lit", new Color(0.22f, 0.24f, 0.3f));
 
-            var piso = Primitiva(PrimitiveType.Cylinder, "Piso", arena.transform, new Vector3(0, -0.1f, 0), new Vector3(24, 0.1f, 24), vis.materialPiso);
+            var piso = Primitiva(PrimitiveType.Cylinder, "Piso", arena.transform, new Vector3(0, -0.1f, 0), new Vector3(24, 0.1f, 24), vis != null ? vis.materialPiso : null);
             Primitiva(PrimitiveType.Cylinder, "Borde neón", arena.transform, new Vector3(0, -0.13f, 0), new Vector3(24.6f, 0.08f, 24.6f), emisivoCian);
             Primitiva(PrimitiveType.Cylinder, "Círculo central", arena.transform, new Vector3(0, -0.04f, 0), new Vector3(6f, 0.02f, 6f), metal);
             Primitiva(PrimitiveType.Cube, "Línea central", arena.transform, new Vector3(0, -0.03f, 0), new Vector3(0.15f, 0.02f, 22f), emisivoMagenta);
@@ -411,7 +591,7 @@ namespace TP4.EditorTools
             for (int i = 0; i < 10; i++)
             {
                 float ang = i * Mathf.PI * 2f / 10f;
-                var pos = new Vector3(Mathf.Cos(ang) * 15f, 3f, Mathf.Sin(ang) * 15f);
+                var pos = new Vector3(Mathf.Cos(ang) * 18f, 3f, Mathf.Sin(ang) * 18f);
                 var pilar = Primitiva(PrimitiveType.Cube, "Pilar " + i, arena.transform, pos, new Vector3(1.2f, 6f, 1.2f), metal);
                 pilar.transform.LookAt(new Vector3(0, 3f, 0));
                 Primitiva(PrimitiveType.Cube, "Neón", pilar.transform, new Vector3(0, 0, 0.55f), new Vector3(0.3f, 0.9f, 0.05f), i % 2 == 0 ? emisivoCian : emisivoMagenta);
@@ -427,56 +607,24 @@ namespace TP4.EditorTools
                     luz.transform.position = pos * 0.85f + Vector3.up * 1f;
                 }
             }
+        }
 
-            // Spawns: jugador a la derecha (+X), enemigos a la izquierda (−X), estilo FF7.
-            var spawns = new GameObject("Spawns").transform;
-            var sj = new Transform[3];
-            var se = new Transform[3];
-            for (int i = 0; i < 3; i++)
-            {
-                sj[i] = Spawn("Jugador " + (i + 1), spawns, new Vector3(5f + i * 0.4f, 0, -3.2f + i * 3.2f), Vector3.left);
-                se[i] = Spawn("Enemigo " + (i + 1), spawns, new Vector3(-5f - i * 0.4f, 0, -3.2f + i * 3.2f), Vector3.right);
-            }
-            var sjefe = Spawn("Jefe", spawns, new Vector3(-6.5f, 0, 0), Vector3.right);
-
-            // Cámara
+        static BattleCamera CrearCamara(Vector3 pos, Vector3 mirar, float fov)
+        {
             var camGO = new GameObject("Main Camera");
             camGO.tag = "MainCamera";
             var cam = camGO.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.03f, 0.04f, 0.09f);
-            cam.fieldOfView = 42f;
+            cam.fieldOfView = fov;
             cam.farClipPlane = 200f;
             camGO.AddComponent<AudioListener>();
-            camGO.transform.position = new Vector3(13.5f, 6.8f, -11f);
-            camGO.transform.LookAt(new Vector3(-0.5f, -0.6f, 0.4f));
+            camGO.transform.position = pos;
+            camGO.transform.LookAt(mirar);
             var battleCam = camGO.AddComponent<BattleCamera>();
             var datosCam = cam.GetUniversalAdditionalCameraData();
             if (datosCam != null) datosCam.renderPostProcessing = true;
-
-            CrearPostProceso();
-
-            // BattleManager
-            var bmGO = new GameObject("BattleManager");
-            var bm = bmGO.AddComponent<BattleManager>();
-            var so = new SerializedObject(bm);
-            so.FindProperty("torneo").objectReferenceValue = torneo;
-            so.FindProperty("visuales").objectReferenceValue = vis;
-            so.FindProperty("camara").objectReferenceValue = battleCam;
-            so.FindProperty("spawnJefe").objectReferenceValue = sjefe;
-            var pj = so.FindProperty("spawnsJugador");
-            var pe = so.FindProperty("spawnsEnemigo");
-            pj.arraySize = 3;
-            pe.arraySize = 3;
-            for (int i = 0; i < 3; i++)
-            {
-                pj.GetArrayElementAtIndex(i).objectReferenceValue = sj[i];
-                pe.GetArrayElementAtIndex(i).objectReferenceValue = se[i];
-            }
-            so.ApplyModifiedPropertiesWithoutUndo();
-
-            EditorSceneManager.SaveScene(escena, Escena);
-            AgregarABuild(Escena);
+            return battleCam;
         }
 
         static GameObject Primitiva(PrimitiveType tipo, string nombre, Transform padre, Vector3 pos, Vector3 escala, Material mat)
@@ -532,11 +680,16 @@ namespace TP4.EditorTools
             vol.sharedProfile = perfil;
         }
 
-        static void AgregarABuild(string ruta)
+        /// <summary>Menú principal primero (es la escena con la que arranca el juego), luego el resto.</summary>
+        static void ConfigurarBuild()
         {
-            var escenas = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            if (escenas.Exists(s => s.path == ruta)) return;
-            escenas.Add(new EditorBuildSettingsScene(ruta, true));
+            var escenas = new List<EditorBuildSettingsScene>
+            {
+                new EditorBuildSettingsScene(EscenaMenu, true),
+                new EditorBuildSettingsScene(Escena, true)
+            };
+            string seleccion = Raiz + "/Scenes/SeleccionEquipo.unity";
+            if (File.Exists(seleccion)) escenas.Insert(1, new EditorBuildSettingsScene(seleccion, true));
             EditorBuildSettings.scenes = escenas.ToArray();
         }
     }

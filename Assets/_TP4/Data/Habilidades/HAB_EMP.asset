@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Descarga EMP
   descripcion: "Da\xF1o de energ\xEDa con 70% de Par\xE1lisis (congela la ATB)."
+  nombreEN: EMP blast
+  descripcionEN: Energy damage with a 70% chance to Paralyze (freezes ATB).
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1.1

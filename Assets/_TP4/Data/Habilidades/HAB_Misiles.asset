@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Lluvia de misiles
   descripcion: 
+  nombreEN: Missile rain
+  descripcionEN: 
   icono: {fileID: 0}
   objetivo: 2
   recuperacion: 1.3

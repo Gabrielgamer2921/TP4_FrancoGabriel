@@ -38,23 +38,8 @@ namespace TP4
             rotInicial = transform.rotation;
             mpb = new MaterialPropertyBlock();
 
-            if (data.modelo != null)
-            {
-                var go = Instantiate(data.modelo, transform);
-                go.transform.localPosition = Vector3.zero;
-                go.transform.localRotation = Quaternion.identity;
-                go.transform.localScale = Vector3.one * data.escala;
-                modelo = go.transform;
-                animator = go.GetComponentInChildren<Animator>();
-                if (animator != null && data.animatorController != null)
-                    animator.runtimeAnimatorController = data.animatorController;
-            }
-            else
-            {
-                modelo = CrearPlaceholder(data).transform;
-            }
+            modelo = CrearModelo(data, transform, vis, out animator).transform;
 
-            foreach (var c in modelo.GetComponentsInChildren<Collider>()) Destroy(c);
             renderers = modelo.GetComponentsInChildren<Renderer>();
             CalcularAltura();
 
@@ -66,10 +51,36 @@ namespace TP4
             unit.PhaseTriggered += (u, fase) => { tinte = fase.colorTinte; AplicarTinte(); StartCoroutine(Pulso(1.15f)); };
         }
 
-        GameObject CrearPlaceholder(RobotData data)
+        /// <summary>
+        /// Instancia el modelo de un robot (o el placeholder de cubos si no tiene modelo).
+        /// Lo usan el combate, el menú principal y la selección de equipo.
+        /// </summary>
+        public static GameObject CrearModelo(RobotData data, Transform padre, BattleVisuals vis, out Animator animator)
+        {
+            GameObject go;
+            animator = null;
+            if (data.modelo != null)
+            {
+                go = Instantiate(data.modelo, padre);
+                go.transform.localPosition = Vector3.zero;
+                go.transform.localRotation = Quaternion.identity;
+                go.transform.localScale = Vector3.one * data.escala;
+                animator = go.GetComponentInChildren<Animator>();
+                if (animator != null && data.animatorController != null)
+                    animator.runtimeAnimatorController = data.animatorController;
+            }
+            else
+            {
+                go = CrearPlaceholder(data, padre, vis);
+            }
+            foreach (var c in go.GetComponentsInChildren<Collider>()) Destroy(c);
+            return go;
+        }
+
+        static GameObject CrearPlaceholder(RobotData data, Transform padre, BattleVisuals vis)
         {
             var raiz = new GameObject("Placeholder");
-            raiz.transform.SetParent(transform, false);
+            raiz.transform.SetParent(padre, false);
             raiz.transform.localScale = Vector3.one * data.escala;
 
             Material mat = CrearMaterial(vis != null ? vis.materialPlaceholder : null, data.colorPrincipal, false);

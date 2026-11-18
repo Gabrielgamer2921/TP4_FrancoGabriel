@@ -54,11 +54,15 @@ namespace TP4
         public UnitState State { get; set; }
         public float MultiplicadorVelocidad { get; set; } = 1f;
         public float ProvocarRestante { get; private set; }
+        /// <summary>Modo por turnos: vuelve a actuar después de su acción (Overclock).</summary>
+        public bool AccionExtra { get; set; }
 
         public readonly List<StatusInstance> Estados = new List<StatusInstance>();
         public readonly List<BuffInstance> Buffs = new List<BuffInstance>();
         public readonly List<AbilityData> Habilidades = new List<AbilityData>();
         readonly HashSet<int> fasesActivadas = new HashSet<int>();
+        /// <summary>Multiplicador de stats base (dificultad para los rivales).</summary>
+        float multStats = 1f;
 
         public bool IsAlive => Vida > 0;
         public bool EsJugador => Team == Team.Jugador;
@@ -85,13 +89,14 @@ namespace TP4
         public event Action<BattleUnit> Died;
         public event Action<BattleUnit, BossPhase> PhaseTriggered;
 
-        public void Init(RobotData data, Team team, int slot, UnitView view)
+        public void Init(RobotData data, Team team, int slot, UnitView view, float multiplicadorStats = 1f)
         {
             Data = data;
             Team = team;
             Slot = slot;
             View = view;
-            VidaMax = data.VidaMax;
+            multStats = Mathf.Max(0.1f, multiplicadorStats);
+            VidaMax = Formulas.VidaMax(Mathf.RoundToInt(data.stats.vitalidad * multStats));
             Vida = VidaMax;
             EnergiaMax = data.energiaMax;
             Energia = EnergiaMax;
@@ -113,7 +118,7 @@ namespace TP4
                 foreach (var m in s.data.modificadores)
                     if (m.stat == type) pct += m.porcentaje;
             pct = Mathf.Max(-0.9f, pct);
-            float v = Data.stats.Get(type) * (1f + pct);
+            float v = Data.stats.Get(type) * multStats * (1f + pct);
             return Mathf.Max(type == StatType.Defensa ? 0 : 1, Mathf.RoundToInt(v));
         }
 
@@ -140,20 +145,8 @@ namespace TP4
         {
             if (!IsAlive) return false;
 
-            TickEstados(dt);
+            TickEfectos(dt);
             if (!IsAlive) return false;
-
-            for (int i = Buffs.Count - 1; i >= 0; i--)
-            {
-                Buffs[i].restante -= dt;
-                if (Buffs[i].restante <= 0f) { Buffs.RemoveAt(i); Changed?.Invoke(this); }
-            }
-
-            if (ProvocarRestante > 0f)
-            {
-                ProvocarRestante -= dt;
-                if (ProvocarRestante <= 0f) { ProvocarRestante = 0f; Changed?.Invoke(this); }
-            }
 
             if (State == UnitState.Cargando && !ATBCongelada)
             {
@@ -169,6 +162,34 @@ namespace TP4
             return false;
         }
 
+        /// <summary>
+        /// Modo por turnos: al empezar el turno de este robot, sus estados, buffs y provocación
+        /// avanzan el equivalente a unos segundos (así las duraciones en segundos sirven para los dos modos).
+        /// </summary>
+        public void AvanzarTurno(float segundos)
+        {
+            if (!IsAlive) return;
+            TickEfectos(segundos);
+        }
+
+        void TickEfectos(float dt)
+        {
+            TickEstados(dt);
+            if (!IsAlive) return;
+
+            for (int i = Buffs.Count - 1; i >= 0; i--)
+            {
+                Buffs[i].restante -= dt;
+                if (Buffs[i].restante <= 0f) { Buffs.RemoveAt(i); Changed?.Invoke(this); }
+            }
+
+            if (ProvocarRestante > 0f)
+            {
+                ProvocarRestante -= dt;
+                if (ProvocarRestante <= 0f) { ProvocarRestante = 0f; Changed?.Invoke(this); }
+            }
+        }
+
         void TickEstados(float dt)
         {
             for (int i = Estados.Count - 1; i >= 0; i--)
@@ -178,7 +199,7 @@ namespace TP4
                 if (s.data.danoPorTickPct > 0f)
                 {
                     s.tickTimer -= dt;
-                    if (s.tickTimer <= 0f)
+                    while (s.tickTimer <= 0f)
                     {
                         s.tickTimer += s.data.intervaloTick;
                         int dano = Mathf.Max(1, Mathf.RoundToInt(VidaMax * s.data.danoPorTickPct));
@@ -245,7 +266,7 @@ namespace TP4
             bool estabaLleno = Overdrive >= 1f;
             Overdrive = Mathf.Clamp01(Overdrive + cantidad);
             if (!estabaLleno && Overdrive >= 1f)
-                Message?.Invoke(this, "¡OVERDRIVE!", new Color(1f, 0.85f, 0.2f));
+                Message?.Invoke(this, Loc.T("msg.overdrive"), new Color(1f, 0.85f, 0.2f));
             Changed?.Invoke(this);
         }
 
@@ -277,7 +298,7 @@ namespace TP4
         void MensajeBuff(StatModifierDef mod)
         {
             bool sube = mod.porcentaje >= 0f;
-            string txt = $"{mod.stat} {(sube ? "▲" : "▼")}";
+            string txt = $"{Loc.Stat(mod.stat)} {(sube ? "▲" : "▼")}";
             Message?.Invoke(this, txt, sube ? new Color(0.4f, 1f, 0.5f) : new Color(1f, 0.5f, 0.3f));
         }
 
@@ -302,7 +323,7 @@ namespace TP4
                 if (s.data == data)
                 {
                     s.restante = data.duracion; // refresca
-                    Message?.Invoke(this, data.nombre, data.color);
+                    Message?.Invoke(this, data.Nombre, data.color);
                     Changed?.Invoke(this);
                     return;
                 }
@@ -319,7 +340,7 @@ namespace TP4
                 ATB = 0.9f;
             }
 
-            Message?.Invoke(this, data.nombre, data.color);
+            Message?.Invoke(this, data.Nombre, data.color);
             Changed?.Invoke(this);
         }
 
@@ -337,7 +358,7 @@ namespace TP4
             for (int i = Estados.Count - 1; i >= 0; i--) QuitarEstado(i);
             // También quita los debuffs.
             Buffs.RemoveAll(b => b.mod.porcentaje < 0f);
-            if (n > 0) Message?.Invoke(this, "Purgado", Color.white);
+            if (n > 0) Message?.Invoke(this, Loc.T("msg.purgado"), Color.white);
             Changed?.Invoke(this);
             return n;
         }
@@ -345,13 +366,27 @@ namespace TP4
         public void Provocar(float duracion)
         {
             ProvocarRestante = Mathf.Max(ProvocarRestante, duracion);
-            Message?.Invoke(this, "¡Provoca!", new Color(1f, 0.6f, 0.2f));
+            Message?.Invoke(this, Loc.T("msg.provoca"), new Color(1f, 0.6f, 0.2f));
             Changed?.Invoke(this);
         }
 
         public void ModificarATB(float cantidad)
         {
             if (!IsAlive) return;
+
+            // Modo por turnos: no hay barra. Un impulso grande (Overclock) da una acción extra.
+            var bm = BattleManager.Instance;
+            if (bm != null && bm.ModoTurnos)
+            {
+                if (cantidad >= 0.5f)
+                {
+                    AccionExtra = true;
+                    Message?.Invoke(this, Loc.T("msg.accionExtra"), new Color(0.4f, 0.9f, 1f));
+                    Changed?.Invoke(this);
+                }
+                return;
+            }
+
             if (State == UnitState.Cargando)
             {
                 ATB = Mathf.Clamp(ATB + cantidad, -1f, 0.999f);

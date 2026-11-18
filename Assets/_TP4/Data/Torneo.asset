@@ -32,4 +32,4 @@ MonoBehaviour:
     cantidad: 2
   - item: {fileID: 11400000, guid: 99761ef59c0818a438adc36684e8f76c, type: 2}
     cantidad: 2
-  velocidadBatalla: 1.2
+  velocidadBatalla: 1

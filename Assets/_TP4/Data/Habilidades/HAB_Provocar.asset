@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Provocar
   descripcion: Atrae los ataques enemigos durante 12 s y sube su Defensa.
+  nombreEN: Taunt
+  descripcionEN: Draws enemy attacks for 12 s and raises Defense.
   icono: {fileID: 0}
   objetivo: 4
   recuperacion: 0.7

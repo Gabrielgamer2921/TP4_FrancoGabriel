@@ -14,6 +14,7 @@ namespace TP4
         public string nombre = "Robot";
         public RobotRole rol = RobotRole.Asalto;
         [TextArea(2, 4)] public string descripcion;
+        [TextArea(2, 4)] public string descripcionEN;
         public Sprite retrato;
 
         [Header("Modelo")]
@@ -41,16 +42,20 @@ namespace TP4
         public List<BossPhase> fases = new List<BossPhase>();
 
         public int VidaMax => Formulas.VidaMax(stats.vitalidad);
+        public string Descripcion => Loc.Elegir(descripcion, descripcionEN);
     }
 
     [Serializable]
     public class BossPhase
     {
         public string mensaje = "¡El jefe se enfurece!";
+        public string mensajeEN = "The boss is enraged!";
         [Range(0.05f, 0.95f)] public float umbralVida = 0.5f;
         [Tooltip("Multiplica la velocidad de la ATB.")]
         [Min(0.1f)] public float multiplicadorVelocidad = 1.3f;
         public List<AbilityData> habilidadesNuevas = new List<AbilityData>();
         public Color colorTinte = new Color(1f, 0.3f, 0.2f);
+
+        public string Mensaje => Loc.Elegir(mensaje, mensajeEN);
     }
 }

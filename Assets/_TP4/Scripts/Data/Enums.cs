@@ -50,6 +50,26 @@ namespace TP4
         [InspectorName("Provocar")] Provocar
     }
 
+    /// <summary>
+    /// Cómo corre el tiempo de la ATB (inspirado en las opciones de FF4–FF9).
+    /// En todos los modos la barra avanza según la Agilidad; cambia cuándo se detiene.
+    /// </summary>
+    public enum ModoATB
+    {
+        [InspectorName("Activo (el tiempo nunca se detiene)")] Activo,
+        [InspectorName("Espera (se detiene en submenús y animaciones)")] Espera,
+        [InspectorName("Clásico (se detiene mientras tengas un robot listo)")] Clasico
+    }
+
+    /// <summary>Dificultad: escala las stats de los rivales.</summary>
+    public enum Dificultad
+    {
+        Facil,
+        Normal,
+        Dificil,
+        Mecha
+    }
+
     /// <summary>Animación genérica que dispara una acción (triggers del Animator).</summary>
     public enum ActionAnim
     {

@@ -38,6 +38,7 @@ namespace TP4
         public AudioClip sfxOverdrive;
 
         [Header("Música")]
+        public AudioClip musicaMenu;
         public AudioClip musicaCombate;
         public AudioClip musicaJefe;
         [Range(0f, 1f)] public float volumenMusica = 0.5f;

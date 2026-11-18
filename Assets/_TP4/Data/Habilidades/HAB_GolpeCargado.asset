@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: Golpe cargado
   descripcion: "Golpe devastador. Tarda m\xE1s en volver a actuar."
+  nombreEN: Charged strike
+  descripcionEN: Devastating blow. Takes longer to act again.
   icono: {fileID: 0}
   objetivo: 0
   recuperacion: 1.6

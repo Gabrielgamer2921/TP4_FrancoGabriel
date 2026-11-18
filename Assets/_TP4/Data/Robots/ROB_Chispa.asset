@@ -15,6 +15,7 @@ MonoBehaviour:
   nombre: Chispa
   rol: 3
   descripcion: "Mec\xE1nico. Repara, acelera y purga al equipo."
+  descripcionEN: Mechanic. Repairs, speeds up and cleanses the team.
   retrato: {fileID: 0}
   modelo: {fileID: 0}
   escala: 0.95

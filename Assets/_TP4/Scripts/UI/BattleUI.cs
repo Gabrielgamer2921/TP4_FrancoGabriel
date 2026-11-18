@@ -73,6 +73,7 @@ namespace TP4
         Text textoAccion;
         float accionRestante;
         Text textoRonda;
+        Text textoModo;
         RectTransform banner;
         Text textoBanner;
         CanvasGroup grupoBanner;
@@ -93,6 +94,7 @@ namespace TP4
         readonly List<BattleUnit> candidatosObjetivo = new List<BattleUnit>();
         readonly Dictionary<BattleUnit, float> ultimoPopup = new Dictionary<BattleUnit, float>();
         readonly Dictionary<BattleUnit, int> pilaPopup = new Dictionary<BattleUnit, int>();
+        readonly List<(Text, string)> textosTraducibles = new List<(Text, string)>();
 
         class Opcion
         {
@@ -150,11 +152,32 @@ namespace TP4
             return t;
         }
 
+        /// <summary>Texto con clave de traducción: se actualiza solo si cambia el idioma.</summary>
+        Text TL(Transform padre, string clave, int tam, TextAnchor al, Color? c = null)
+        {
+            var t = T(padre, Loc.T(clave), tam, al, c);
+            textosTraducibles.Add((t, clave));
+            return t;
+        }
+
+        void RefrescarIdioma()
+        {
+            foreach (var (t, clave) in textosTraducibles)
+                if (t != null) t.text = Loc.T(clave);
+            if (bm != null) bm.RefrescarTextos();
+        }
+
+        void OnDestroy()
+        {
+            Ajustes.Cambio -= RefrescarIdioma;
+        }
+
         static RectTransform ArribaIzq(RectTransform rt, float x, float y, float w, float h)
             => UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(x, -y), new Vector2(w, h));
 
         void Construir()
         {
+            Ajustes.Cambio += RefrescarIdioma;
             principal = UIFactory.Estirar(UIFactory.Rect("Principal", raiz));
             grupoPrincipal = principal.gameObject.AddComponent<CanvasGroup>();
             capaMundo = UIFactory.Estirar(UIFactory.Rect("Mundo", principal));
@@ -208,11 +231,11 @@ namespace TP4
             UIFactory.Ubicar(estado, Vector2.zero, Vector2.zero, new Vector2(Margen * 2 + 600, Margen), new Vector2(1920 - Margen * 3 - 600, AltoPanel));
 
             Color cab = new Color(0.75f, 0.8f, 0.95f);
-            ArribaIzq(T(nombres, "NOMBRE", 22, TextAnchor.UpperLeft, cab).rectTransform, 24, 12, 300, 30);
-            ArribaIzq(T(estado, "VIDA", 22, TextAnchor.UpperLeft, cab).rectTransform, 30, 12, 200, 30);
-            ArribaIzq(T(estado, "ENERGÍA", 22, TextAnchor.UpperLeft, cab).rectTransform, 380, 12, 200, 30);
-            ArribaIzq(T(estado, "OVERDRIVE", 22, TextAnchor.UpperLeft, cab).rectTransform, 640, 12, 260, 30);
-            ArribaIzq(T(estado, "ATB", 22, TextAnchor.UpperLeft, cab).rectTransform, 950, 12, 260, 30);
+            ArribaIzq(TL(nombres, "ui.nombre", 22, TextAnchor.UpperLeft, cab).rectTransform, 24, 12, 300, 30);
+            ArribaIzq(TL(estado, "ui.vida", 22, TextAnchor.UpperLeft, cab).rectTransform, 30, 12, 200, 30);
+            ArribaIzq(TL(estado, "ui.energia", 22, TextAnchor.UpperLeft, cab).rectTransform, 380, 12, 200, 30);
+            ArribaIzq(TL(estado, "ui.overdrive", 22, TextAnchor.UpperLeft, cab).rectTransform, 640, 12, 260, 30);
+            ArribaIzq(TL(estado, bm.ModoTurnos ? "ui.turno" : "ui.atb", 22, TextAnchor.UpperLeft, cab).rectTransform, 950, 12, 260, 30);
 
             int i = 0;
             foreach (var u in bm.Jugadores)
@@ -303,6 +326,8 @@ namespace TP4
 
             textoRonda = T(principal, "", 24, TextAnchor.UpperLeft, new Color(0.85f, 0.9f, 1f));
             UIFactory.Ubicar(textoRonda.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -20), new Vector2(500, 40));
+            textoModo = T(principal, "", 22, TextAnchor.UpperRight, new Color(0.85f, 0.9f, 1f));
+            UIFactory.Ubicar(textoModo.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -20), new Vector2(600, 70));
         }
 
         void RegistrarUnidad(BattleUnit u)
@@ -320,6 +345,8 @@ namespace TP4
         {
             if (bm == null) return;
             if (cam == null) cam = Camera.main;
+            ActualizarModoATB();
+            if (PauseMenu.Abierta) return;
 
             ActualizarFilas();
             ActualizarEtiquetas();
@@ -368,16 +395,16 @@ namespace TP4
 
         string TextoEstados(BattleUnit u)
         {
-            if (!u.IsAlive) return "<color=#FF6060>KO</color>";
+            if (!u.IsAlive) return $"<color=#FF6060>{Loc.T("est.ko")}</color>";
             var sb = new StringBuilder();
             foreach (var s in u.Estados)
-                sb.Append($"<color=#{Hex(s.data.color)}>{s.data.abreviatura}</color> ");
-            if (u.EstaProvocando) sb.Append("<color=#FFA040>PROV</color> ");
+                sb.Append($"<color=#{Hex(s.data.color)}>{s.data.Abreviatura}</color> ");
+            if (u.EstaProvocando) sb.Append($"<color=#FFA040>{Loc.T("est.prov")}</color> ");
             foreach (StatType st in Enum.GetValues(typeof(StatType)))
             {
                 float pct = u.StatModPct(st);
                 if (Mathf.Abs(pct) < 0.01f) continue;
-                string abrev = st.ToString().Substring(0, 3).ToUpper();
+                string abrev = Loc.Stat(st);
                 sb.Append(pct > 0 ? $"<color=#70FF80>{abrev}▲</color> " : $"<color=#FF9050>{abrev}▼</color> ");
             }
             return sb.ToString().TrimEnd();
@@ -477,43 +504,43 @@ namespace TP4
             var d = u.Data;
             ops.Add(new Opcion
             {
-                texto = "Atacar",
+                texto = Loc.T("cmd.atacar"),
                 habilitada = d.ataqueBasico != null,
-                ayuda = d.ataqueBasico != null ? d.ataqueBasico.descripcion : "",
+                ayuda = d.ataqueBasico != null ? d.ataqueBasico.Descripcion : "",
                 alConfirmar = () => Elegir(d.ataqueBasico, () => AbrirComandos(u, 0))
             });
             if (u.OverdriveListo)
             {
                 ops.Add(new Opcion
                 {
-                    texto = "OVERDRIVE",
+                    texto = Loc.T("cmd.overdrive"),
                     color = ColorODLleno,
-                    ayuda = $"{d.overdrive.nombre}: {d.overdrive.descripcion}",
+                    ayuda = $"{d.overdrive.Nombre}: {d.overdrive.Descripcion}",
                     alConfirmar = () => Elegir(d.overdrive, () => AbrirComandos(u, 1))
                 });
             }
             int idxModulos = ops.Count;
             ops.Add(new Opcion
             {
-                texto = "Módulos",
+                texto = Loc.T("cmd.modulos"),
                 habilitada = u.Habilidades.Count > 0,
-                ayuda = "Habilidades que consumen energía.",
+                ayuda = Loc.T("cmd.modulos.ayuda"),
                 alConfirmar = () => AbrirModulos(u, idxModulos)
             });
             int idxItems = ops.Count;
             ops.Add(new Opcion
             {
-                texto = "Ítems",
+                texto = Loc.T("cmd.items"),
                 habilitada = GameSession.Inventario.TieneAlgo,
-                ayuda = "Inventario compartido del equipo.",
+                ayuda = Loc.T("cmd.items.ayuda"),
                 alConfirmar = () => AbrirItems(u, idxItems)
             });
             if (bm.ListosJugador.Count > 1)
             {
                 ops.Add(new Opcion
                 {
-                    texto = "Cambiar ►",
-                    ayuda = "Pasar el turno a otro robot listo.",
+                    texto = Loc.T("cmd.cambiar"),
+                    ayuda = Loc.T("cmd.cambiar.ayuda"),
                     alConfirmar = () => { bm.RotarListos(); Sfx.Play(SfxId.Confirmar, 0.6f); CerrarMenus(); }
                 });
             }
@@ -531,10 +558,10 @@ namespace TP4
                 var hab = h;
                 ops.Add(new Opcion
                 {
-                    texto = hab.nombre,
+                    texto = hab.Nombre,
                     derecha = $"{hab.costoEnergia} EN",
                     habilitada = u.PuedeUsar(hab),
-                    ayuda = hab.descripcion + (hab.recuperacion > 1.05f ? "  <color=#FFB060>(lento)</color>" : hab.recuperacion < 0.95f ? "  <color=#70FFB0>(rápido)</color>" : ""),
+                    ayuda = hab.Descripcion + (hab.recuperacion > 1.05f ? $"  <color=#FFB060>{Loc.T("cmd.lento")}</color>" : hab.recuperacion < 0.95f ? $"  <color=#70FFB0>{Loc.T("cmd.rapido")}</color>" : ""),
                     alConfirmar = () => Elegir(hab, () => AbrirModulos(u, indiceVolver))
                 });
             }
@@ -552,9 +579,9 @@ namespace TP4
                 if (n <= 0) continue;
                 ops.Add(new Opcion
                 {
-                    texto = item.nombre,
+                    texto = item.Nombre,
                     derecha = "x" + n,
-                    ayuda = item.descripcion,
+                    ayuda = item.Descripcion,
                     alConfirmar = () => Elegir(item, () => AbrirItems(u, indiceVolver))
                 });
             }
@@ -582,7 +609,7 @@ namespace TP4
                     var vivos = bm.Vivos(rival);
                     var prov = vivos.FindAll(x => x.EstaProvocando);
                     if (prov.Count > 0) vivos = prov;
-                    foreach (var v in vivos) AgregarOpcionObjetivo(ops, v, v.EstaProvocando ? "PROVOCA" : null);
+                    foreach (var v in vivos) AgregarOpcionObjetivo(ops, v, v.EstaProvocando ? Loc.T("obj.provoca") : null);
                     break;
                 }
                 case TargetMode.AliadoUnico:
@@ -596,8 +623,8 @@ namespace TP4
                     candidatosObjetivo.AddRange(todos);
                     ops.Add(new Opcion
                     {
-                        texto = accion.objetivo == TargetMode.TodosEnemigos ? "Todos los enemigos" : "Todo el equipo",
-                        ayuda = accion.descripcion,
+                        texto = accion.objetivo == TargetMode.TodosEnemigos ? Loc.T("obj.enemigos") : Loc.T("obj.equipo"),
+                        ayuda = accion.Descripcion,
                         alSeleccionar = () => { objetivosResaltados.Clear(); objetivosResaltados.AddRange(todos); },
                         alConfirmar = () => Confirmar(new List<BattleUnit>(todos))
                     });
@@ -623,7 +650,7 @@ namespace TP4
             {
                 texto = v.Nombre,
                 derecha = derecha,
-                ayuda = accionElegida.descripcion,
+                ayuda = accionElegida.Descripcion,
                 alSeleccionar = () => { objetivosResaltados.Clear(); objetivosResaltados.Add(v); },
                 alConfirmar = () => Confirmar(new List<BattleUnit> { v })
             });
@@ -785,6 +812,21 @@ namespace TP4
         // =====================================================================
         public void SetRonda(string texto) => textoRonda.text = texto;
 
+        /// <summary>Hay un submenú (Módulos/Ítems) o una selección de objetivo abierta.</summary>
+        public bool EnSubmenu => modo == Modo.Lista || modo == Modo.Objetivo;
+
+        /// <summary>Hay algún menú de órdenes abierto.</summary>
+        public bool EsperandoOrden => modo != Modo.Nada;
+
+        void ActualizarModoATB()
+        {
+            string modo = bm.ModoTurnos
+                ? $"{Loc.T("ui.modoTurnos")}  ·  {Loc.T(bm.FaseDe == Team.Jugador ? "ui.fase.jugador" : "ui.fase.enemigo")}"
+                : Loc.T("ui.atb.activa");
+            string texto = $"<color=#FFE070>{modo}</color>\n<size=18>{Loc.T("pausa.hint")}</size>";
+            if (textoModo.text != texto) textoModo.text = texto;
+        }
+
         public void AnunciarAccion(string nombre, Color color)
         {
             textoAccion.text = nombre;
@@ -888,7 +930,7 @@ namespace TP4
 
             var titulo = panelFin.Find("Titulo");
             if (titulo != null) Destroy(titulo.gameObject);
-            string texto = victoria ? (ultimaPelea ? "¡CAMPEÓN DEL TORNEO!" : "¡VICTORIA!") : "DERROTA";
+            string texto = victoria ? (ultimaPelea ? Loc.T("msg.campeonTorneo") : Loc.T("msg.victoria")) : Loc.T("msg.derrota");
             var t = T(panelFin, texto, 54, TextAnchor.MiddleCenter, victoria ? ColorActivo : new Color(1f, 0.4f, 0.4f));
             t.name = "Titulo";
             t.fontStyle = FontStyle.Bold;
@@ -896,13 +938,17 @@ namespace TP4
 
             var ops = new List<Opcion>();
             if (victoria && !ultimaPelea)
-                ops.Add(new Opcion { texto = "Siguiente pelea", alConfirmar = bm.Continuar });
-            if (victoria && ultimaPelea)
-                ops.Add(new Opcion { texto = "Jugar de nuevo", alConfirmar = bm.VolverAlInicio });
+                ops.Add(new Opcion { texto = Loc.T("fin.siguiente"), alConfirmar = bm.Continuar });
+            else
+                ops.Add(new Opcion { texto = Loc.T("fin.menu"), alConfirmar = bm.VolverAlMenu });
+
+            var sub = panelFin.Find("Subtitulo");
+            if (sub != null) Destroy(sub.gameObject);
             if (!victoria)
             {
-                ops.Add(new Opcion { texto = "Reintentar pelea", alConfirmar = bm.Reintentar });
-                ops.Add(new Opcion { texto = "Volver al inicio", alConfirmar = bm.VolverAlInicio });
+                var st = T(panelFin, Loc.T("msg.derrota.sub"), 24, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 1f));
+                st.name = "Subtitulo";
+                UIFactory.Ubicar(st.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(680, 40));
             }
 
             // Contenedor de opciones debajo del título

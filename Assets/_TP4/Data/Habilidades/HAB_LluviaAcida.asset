@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
   nombre: "Lluvia \xE1cida"
   descripcion: "Da\xF1o a todos los enemigos con 60% de Corrosi\xF3n (\u2212Defensa)."
+  nombreEN: Acid rain
+  descripcionEN: "Damages all enemies with a 60% chance of Corrosion (\u2212Defense)."
   icono: {fileID: 0}
   objetivo: 2
   recuperacion: 1.3
