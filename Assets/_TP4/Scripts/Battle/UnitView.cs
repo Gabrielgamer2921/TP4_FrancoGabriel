@@ -367,6 +367,41 @@ namespace TP4
         }
 
         // ---------- Estados ----------
+        /// <summary>Jaula de barras eléctricas alrededor del robot (estados liberables).</summary>
+        GameObject CrearJaula(StatusData estado)
+        {
+            var jaula = new GameObject("Jaula_" + estado.nombre);
+            jaula.transform.SetParent(transform, false);
+            var mat = CrearMaterial(vis != null ? vis.materialEmisivo : null, estado.color, true);
+            float r = 0.85f * Mathf.Max(1f, unit.Data.escala);
+            const int lados = 8;
+            var puntos = new Vector3[lados];
+            for (int i = 0; i < lados; i++)
+            {
+                float a = i * Mathf.PI * 2f / lados;
+                puntos[i] = new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
+                // Barras verticales
+                var barra = Pieza(jaula.transform, PrimitiveType.Cube, puntos[i] + Vector3.up * Altura * 0.5f,
+                    new Vector3(0.05f, Altura, 0.05f), mat);
+                Destroy(barra.GetComponent<Collider>());
+            }
+            // Anillos horizontales
+            foreach (float h in new[] { 0.15f, 0.55f, 0.95f })
+            {
+                for (int i = 0; i < lados; i++)
+                {
+                    Vector3 a = puntos[i] + Vector3.up * Altura * h;
+                    Vector3 b = puntos[(i + 1) % lados] + Vector3.up * Altura * h;
+                    var seg = Pieza(jaula.transform, PrimitiveType.Cube, (a + b) * 0.5f, new Vector3(0.04f, 0.04f, Vector3.Distance(a, b)), mat);
+                    seg.transform.localRotation = Quaternion.LookRotation(b - a);
+                    Destroy(seg.GetComponent<Collider>());
+                }
+            }
+            jaula.AddComponent<Chisporroteo>();
+            Sfx.Play(estado.sfxAplicar, SfxId.Estado, 0.9f);
+            return jaula;
+        }
+
         public GameObject CrearVfxEstado(StatusData estado)
         {
             if (estado.vfxLoop != null)
@@ -375,6 +410,8 @@ namespace TP4
                 v.transform.localPosition = Vector3.up * Altura * 0.5f;
                 return v;
             }
+            if (estado.liberable) return CrearJaula(estado);
+
             // Anillo de color a los pies.
             var anillo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(anillo.GetComponent<Collider>());
@@ -386,6 +423,20 @@ namespace TP4
             anillo.AddComponent<Latido>();
             Sfx.Play(estado.sfxAplicar, SfxId.Estado, 0.7f);
             return anillo;
+        }
+    }
+
+    /// <summary>Chisporroteo de la jaula de la Red eléctrica: gira y "parpadea" barras al azar.</summary>
+    public class Chisporroteo : MonoBehaviour
+    {
+        float t;
+        void Update()
+        {
+            transform.Rotate(0f, 40f * Time.deltaTime, 0f);
+            t -= Time.deltaTime;
+            if (t > 0f) return;
+            t = 0.07f;
+            foreach (Transform c in transform) c.gameObject.SetActive(Random.value > 0.18f);
         }
     }
 

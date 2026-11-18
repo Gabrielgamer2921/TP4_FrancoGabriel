@@ -56,6 +56,13 @@ namespace TP4
         public float ProvocarRestante { get; private set; }
         /// <summary>Modo por turnos: vuelve a actuar después de su acción (Overclock).</summary>
         public bool AccionExtra { get; set; }
+        /// <summary>Modo por turnos: acciones por turno (el jefe tiene más).</summary>
+        public int AccionesPorTurno { get; private set; } = 1;
+
+        // Memoria para la IA: evita que un robot repita siempre lo mismo.
+        public ActionData UltimaAccion { get; set; }
+        /// <summary>Cuántas acciones seguidas sin hacer daño lleva (curar, buffear...).</summary>
+        public int RachaSoporte { get; set; }
 
         public readonly List<StatusInstance> Estados = new List<StatusInstance>();
         public readonly List<BuffInstance> Buffs = new List<BuffInstance>();
@@ -88,6 +95,8 @@ namespace TP4
         public event Action<BattleUnit, string, Color> Message;
         public event Action<BattleUnit> Died;
         public event Action<BattleUnit, BossPhase> PhaseTriggered;
+        /// <summary>Se aplicó un estado nuevo (no se dispara al refrescar uno existente).</summary>
+        public event Action<BattleUnit, StatusData> EstadoAplicado;
 
         public void Init(RobotData data, Team team, int slot, UnitView view, float multiplicadorStats = 1f)
         {
@@ -106,6 +115,7 @@ namespace TP4
             ATB = UnityEngine.Random.Range(0f, 0.45f);
             Habilidades.Clear();
             Habilidades.AddRange(data.habilidades);
+            AccionesPorTurno = Mathf.Max(1, data.accionesPorTurno);
             name = $"{team}_{slot}_{data.nombre}";
         }
 
@@ -136,7 +146,21 @@ namespace TP4
         {
             if (a == null || !IsAlive) return false;
             if (a.esOverdrive) return OverdriveListo;
+            if (EnfriamientoRestante(a) > 0) return false;
             return Energia >= a.costoEnergia;
+        }
+
+        // ---------- Enfriamientos ----------
+        readonly Dictionary<AbilityData, int> enfriamientos = new Dictionary<AbilityData, int>();
+
+        public int EnfriamientoRestante(AbilityData a) => a != null && enfriamientos.TryGetValue(a, out int n) ? n : 0;
+
+        /// <summary>Después de cada acción propia: bajan los enfriamientos y arranca el de la acción usada.</summary>
+        public void RegistrarUso(ActionData accion)
+        {
+            var claves = new List<AbilityData>(enfriamientos.Keys);
+            foreach (var k in claves) enfriamientos[k] = Mathf.Max(0, enfriamientos[k] - 1);
+            if (accion is AbilityData hab && hab.enfriamiento > 0) enfriamientos[hab] = hab.enfriamiento;
         }
 
         // ---------- Tiempo ----------
@@ -302,6 +326,26 @@ namespace TP4
             Message?.Invoke(this, txt, sube ? new Color(0.4f, 1f, 0.5f) : new Color(1f, 0.5f, 0.3f));
         }
 
+        public bool TieneEstadoLiberable
+        {
+            get
+            {
+                foreach (var s in Estados) if (s.data.liberable) return true;
+                return false;
+            }
+        }
+
+        /// <summary>Quita los estados liberables (Red eléctrica). Devuelve cuántos quitó.</summary>
+        public int Liberar()
+        {
+            int n = 0;
+            for (int i = Estados.Count - 1; i >= 0; i--)
+                if (Estados[i].data.liberable) { QuitarEstado(i); n++; }
+            if (n > 0) Message?.Invoke(this, Loc.T("msg.liberado"), new Color(0.5f, 1f, 1f));
+            Changed?.Invoke(this);
+            return n;
+        }
+
         public bool TieneEstado(StatusData data)
         {
             foreach (var s in Estados) if (s.data == data) return true;
@@ -341,6 +385,7 @@ namespace TP4
             }
 
             Message?.Invoke(this, data.Nombre, data.color);
+            EstadoAplicado?.Invoke(this, data);
             Changed?.Invoke(this);
         }
 
@@ -429,6 +474,9 @@ namespace TP4
                 {
                     fasesActivadas.Add(i);
                     MultiplicadorVelocidad *= f.multiplicadorVelocidad;
+                    AccionesPorTurno += f.accionesExtra;
+                    if (f.bonusStats != null)
+                        foreach (var b in f.bonusStats) Buffs.Add(new BuffInstance { mod = b, restante = float.MaxValue });
                     foreach (var h in f.habilidadesNuevas)
                         if (h != null && !Habilidades.Contains(h)) Habilidades.Add(h);
                     PhaseTriggered?.Invoke(this, f);

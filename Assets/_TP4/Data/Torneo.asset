@@ -23,6 +23,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 83be99b5100da224da708e762098cf20, type: 2}
   - {fileID: 11400000, guid: 031bb0901e8da6e4bac8cd3474047f4c, type: 2}
   - {fileID: 11400000, guid: 6d4b6af7e282007408f8f91d0127f601, type: 2}
+  accionLiberar: {fileID: 11400000, guid: 3164262c1514917428cbaa1ede2e29ca, type: 2}
   inventarioInicial:
   - item: {fileID: 11400000, guid: db2d713f60a9f9c47b0d4ec24aa3cecd, type: 2}
     cantidad: 4

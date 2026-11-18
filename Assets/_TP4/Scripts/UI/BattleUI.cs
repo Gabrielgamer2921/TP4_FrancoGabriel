@@ -51,6 +51,8 @@ namespace TP4
             public Text nombre, estados, vida, energia;
             public Image resaltado;
             public UIFactory.Barra barraVida, barraEnergia, barraOD, barraATB;
+            // Colores tal como están en el prefab (los estados especiales se calculan a partir de estos).
+            public Color cNombre, cVida, cOD, cATB;
         }
         readonly List<Fila> filas = new List<Fila>();
 
@@ -79,6 +81,8 @@ namespace TP4
         CanvasGroup grupoBanner;
         Coroutine rutinaBanner;
         RectTransform panelFin;
+        Text tituloFin, subtituloFin;
+        RectTransform opcionesFinRect;
         RectTransform letterArriba, letterAbajo;
         readonly List<Text> cursores = new List<Text>();
         Text cursorActivo;
@@ -94,7 +98,6 @@ namespace TP4
         readonly List<BattleUnit> candidatosObjetivo = new List<BattleUnit>();
         readonly Dictionary<BattleUnit, float> ultimoPopup = new Dictionary<BattleUnit, float>();
         readonly Dictionary<BattleUnit, int> pilaPopup = new Dictionary<BattleUnit, int>();
-        readonly List<(Text, string)> textosTraducibles = new List<(Text, string)>();
 
         class Opcion
         {
@@ -114,17 +117,14 @@ namespace TP4
         {
             AsegurarEventSystem();
 
-            var go = new GameObject("BattleUI");
-            var canvas = go.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
-            var scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-            go.AddComponent<GraphicRaycaster>();
+            // Si existe el prefab editable (TP4 > Generar UI editable) se usa ese; si no, se arma todo por código.
+            GameObject go = vis != null && vis.prefabUICombate != null
+                ? UnityEngine.Object.Instantiate(vis.prefabUICombate)
+                : new GameObject("BattleUI");
+            go.name = "BattleUI";
+            UIFactory.AsegurarCanvas(go, 10);
 
-            var ui = go.AddComponent<BattleUI>();
+            var ui = UIBuilder.Componente<BattleUI>(go);
             ui.bm = bm;
             ui.vis = vis;
             ui.fuente = vis != null && vis.fuente != null ? vis.fuente : UIFactory.FuentePorDefecto;
@@ -132,6 +132,22 @@ namespace TP4
             ui.raiz = (RectTransform)go.transform;
             ui.Construir();
             return ui;
+        }
+
+        /// <summary>
+        /// Editor: arma la UI de combate completa (con 3 filas de ejemplo) para guardarla como prefab editable.
+        /// </summary>
+        public static GameObject GenerarPlantilla(BattleVisuals vis, GameObject existente = null)
+        {
+            var go = existente != null ? existente : new GameObject("UI_Combate");
+            UIFactory.AsegurarCanvas(go, 10);
+            var ui = go.AddComponent<BattleUI>();
+            ui.vis = vis;
+            ui.fuente = vis != null && vis.fuente != null ? vis.fuente : UIFactory.FuentePorDefecto;
+            ui.raiz = (RectTransform)go.transform;
+            ui.Construir();
+            UnityEngine.Object.DestroyImmediate(ui);
+            return go;
         }
 
         public static void AsegurarEventSystem()
@@ -145,6 +161,7 @@ namespace TP4
             modulo.AssignDefaultActions();
         }
 
+        /// <summary>Textos creados en tiempo de ejecución (popups, opciones de menú).</summary>
         Text T(Transform padre, string s, int tam, TextAnchor al, Color? c = null)
         {
             var t = UIFactory.Texto(padre, s, tam, al, c ?? ColorTexto, fuente);
@@ -152,126 +169,168 @@ namespace TP4
             return t;
         }
 
-        /// <summary>Texto con clave de traducción: se actualiza solo si cambia el idioma.</summary>
-        Text TL(Transform padre, string clave, int tam, TextAnchor al, Color? c = null)
+        void AlCambiarAjustes()
         {
-            var t = T(padre, Loc.T(clave), tam, al, c);
-            textosTraducibles.Add((t, clave));
-            return t;
-        }
-
-        void RefrescarIdioma()
-        {
-            foreach (var (t, clave) in textosTraducibles)
-                if (t != null) t.text = Loc.T(clave);
             if (bm != null) bm.RefrescarTextos();
         }
 
         void OnDestroy()
         {
-            Ajustes.Cambio -= RefrescarIdioma;
+            Ajustes.Cambio -= AlCambiarAjustes;
         }
 
-        static RectTransform ArribaIzq(RectTransform rt, float x, float y, float w, float h)
-            => UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(x, -y), new Vector2(w, h));
+        static Action<RectTransform> ArribaIzq(float x, float y, float w, float h)
+            => rt => UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(x, -y), new Vector2(w, h));
+
+        bool EnJuego => bm != null && Application.isPlaying;
 
         void Construir()
         {
-            Ajustes.Cambio += RefrescarIdioma;
-            principal = UIFactory.Estirar(UIFactory.Rect("Principal", raiz));
-            grupoPrincipal = principal.gameObject.AddComponent<CanvasGroup>();
-            capaMundo = UIFactory.Estirar(UIFactory.Rect("Mundo", principal));
+            var b = new UIBuilder(vis);
+            if (EnJuego) Ajustes.Cambio += AlCambiarAjustes;
 
-            ConstruirPanelInferior();
-            ConstruirEtiquetasEnemigos();
-            ConstruirVentanas();
+            principal = b.Rect(raiz, "Principal", rt => UIFactory.Estirar(rt));
+            grupoPrincipal = UIBuilder.Componente<CanvasGroup>(principal.gameObject);
+            capaMundo = b.Rect(principal, "Mundo", rt => UIFactory.Estirar(rt));
+
+            ConstruirPanelInferior(b);
+            if (EnJuego) ConstruirEtiquetasEnemigos();
+            ConstruirVentanas(b);
 
             // Cursor de la unidad activa
-            cursorActivo = T(capaMundo, "▼", 44, TextAnchor.MiddleCenter, new Color(0.4f, 1f, 1f));
-            UIFactory.Ubicar(cursorActivo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(60, 60));
-            cursorActivo.enabled = false;
+            cursorActivo = b.Texto(capaMundo, "CursorActivo", "▼", 44, TextAnchor.MiddleCenter, new Color(0.4f, 1f, 1f),
+                rt => UIFactory.Ubicar(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(60, 60)));
 
             // Capas que siguen visibles durante cinemáticas
-            capaPopups = UIFactory.Estirar(UIFactory.Rect("Popups", raiz));
+            capaPopups = b.Rect(raiz, "Popups", rt => UIFactory.Estirar(rt));
 
-            letterArriba = UIFactory.Rect("LetterboxArriba", raiz);
-            letterArriba.anchorMin = new Vector2(0, 1); letterArriba.anchorMax = new Vector2(1, 1);
-            letterArriba.pivot = new Vector2(0.5f, 1); letterArriba.sizeDelta = new Vector2(0, 0);
-            letterArriba.gameObject.AddComponent<Image>().color = Color.black;
-            letterAbajo = UIFactory.Rect("LetterboxAbajo", raiz);
-            letterAbajo.anchorMin = new Vector2(0, 0); letterAbajo.anchorMax = new Vector2(1, 0);
-            letterAbajo.pivot = new Vector2(0.5f, 0); letterAbajo.sizeDelta = new Vector2(0, 0);
-            letterAbajo.gameObject.AddComponent<Image>().color = Color.black;
+            letterArriba = b.Rect(raiz, "LetterboxArriba", rt =>
+            {
+                rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(1, 1);
+                rt.pivot = new Vector2(0.5f, 1); rt.sizeDelta = new Vector2(0, 0);
+                rt.gameObject.AddComponent<Image>().color = Color.black;
+            });
+            letterAbajo = b.Rect(raiz, "LetterboxAbajo", rt =>
+            {
+                rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0);
+                rt.pivot = new Vector2(0.5f, 0); rt.sizeDelta = new Vector2(0, 0);
+                rt.gameObject.AddComponent<Image>().color = Color.black;
+            });
 
             // Banner central
-            banner = UIFactory.Rect("Banner", raiz);
-            banner.anchorMin = new Vector2(0, 0.5f); banner.anchorMax = new Vector2(1, 0.5f);
-            banner.pivot = new Vector2(0.5f, 0.5f); banner.anchoredPosition = new Vector2(0, 120); banner.sizeDelta = new Vector2(0, 170);
-            var bannerImg = banner.gameObject.AddComponent<Image>();
-            bannerImg.color = new Color(0, 0, 0.1f, 0.65f);
-            bannerImg.raycastTarget = false;
-            grupoBanner = banner.gameObject.AddComponent<CanvasGroup>();
-            grupoBanner.alpha = 0f;
+            banner = b.Rect(raiz, "Banner", rt =>
+            {
+                rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(1, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f); rt.anchoredPosition = new Vector2(0, 120); rt.sizeDelta = new Vector2(0, 170);
+                var img = rt.gameObject.AddComponent<Image>();
+                img.color = new Color(0, 0, 0.1f, 0.65f);
+                img.raycastTarget = false;
+            });
+            grupoBanner = UIBuilder.Componente<CanvasGroup>(banner.gameObject);
             grupoBanner.blocksRaycasts = false;
-            textoBanner = T(banner, "", 64, TextAnchor.MiddleCenter);
-            UIFactory.Estirar(textoBanner.rectTransform);
-            textoBanner.fontStyle = FontStyle.Bold;
+            textoBanner = b.Texto(banner, "TextoBanner", "¡VICTORIA!", 64, TextAnchor.MiddleCenter, ColorTexto, rt =>
+            {
+                UIFactory.Estirar(rt);
+                rt.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            });
 
-            // Panel de fin
-            panelFin = (RectTransform)UIFactory.Ventana("PanelFin", raiz, vis).transform;
-            UIFactory.Ubicar(panelFin, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -40), new Vector2(720, 360));
-            panelFin.gameObject.SetActive(false);
+            // Panel de fin (título, subtítulo y lugar para los botones)
+            panelFin = b.Ventana(raiz, "PanelFin", rt =>
+                UIFactory.Ubicar(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -40), new Vector2(720, 360)));
+            tituloFin = b.Texto(panelFin, "Titulo", "¡VICTORIA!", 54, TextAnchor.MiddleCenter, ColorActivo,
+                rt =>
+                {
+                    UIFactory.Ubicar(rt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(680, 80));
+                    rt.GetComponent<Text>().fontStyle = FontStyle.Bold;
+                });
+            subtituloFin = b.Texto(panelFin, "Subtitulo", "", 24, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 1f),
+                rt => UIFactory.Ubicar(rt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(680, 40)));
+            opcionesFinRect = b.Rect(panelFin, "Opciones", rt =>
+                UIFactory.Ubicar(rt, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(420, 200)));
+
+            if (EnJuego)
+            {
+                // Estado inicial en juego (en el prefab todo queda visible para poder editarlo).
+                cursorActivo.enabled = false;
+                grupoBanner.alpha = 0f;
+                panelFin.gameObject.SetActive(false);
+                ventanaComandos.gameObject.SetActive(false);
+                ventanaLista.gameObject.SetActive(false);
+                ventanaObjetivos.gameObject.SetActive(false);
+                barraAyuda.gameObject.SetActive(false);
+                barraAccion.gameObject.SetActive(false);
+                letterArriba.sizeDelta = new Vector2(letterArriba.sizeDelta.x, 0);
+                letterAbajo.sizeDelta = new Vector2(letterAbajo.sizeDelta.x, 0);
+                textoBanner.text = "";
+            }
         }
 
-        void ConstruirPanelInferior()
+        void ConstruirPanelInferior(UIBuilder b)
         {
-            var nombres = (RectTransform)UIFactory.Ventana("PanelNombres", principal, vis).transform;
-            UIFactory.Ubicar(nombres, Vector2.zero, Vector2.zero, new Vector2(Margen, Margen), new Vector2(600, AltoPanel));
-            var estado = (RectTransform)UIFactory.Ventana("PanelEstado", principal, vis).transform;
-            UIFactory.Ubicar(estado, Vector2.zero, Vector2.zero, new Vector2(Margen * 2 + 600, Margen), new Vector2(1920 - Margen * 3 - 600, AltoPanel));
+            var nombres = b.Ventana(principal, "PanelNombres", rt =>
+                UIFactory.Ubicar(rt, Vector2.zero, Vector2.zero, new Vector2(Margen, Margen), new Vector2(600, AltoPanel)));
+            var estado = b.Ventana(principal, "PanelEstado", rt =>
+                UIFactory.Ubicar(rt, Vector2.zero, Vector2.zero, new Vector2(Margen * 2 + 600, Margen), new Vector2(1920 - Margen * 3 - 600, AltoPanel)));
 
             Color cab = new Color(0.75f, 0.8f, 0.95f);
-            ArribaIzq(TL(nombres, "ui.nombre", 22, TextAnchor.UpperLeft, cab).rectTransform, 24, 12, 300, 30);
-            ArribaIzq(TL(estado, "ui.vida", 22, TextAnchor.UpperLeft, cab).rectTransform, 30, 12, 200, 30);
-            ArribaIzq(TL(estado, "ui.energia", 22, TextAnchor.UpperLeft, cab).rectTransform, 380, 12, 200, 30);
-            ArribaIzq(TL(estado, "ui.overdrive", 22, TextAnchor.UpperLeft, cab).rectTransform, 640, 12, 260, 30);
-            ArribaIzq(TL(estado, bm.ModoTurnos ? "ui.turno" : "ui.atb", 22, TextAnchor.UpperLeft, cab).rectTransform, 950, 12, 260, 30);
+            b.TextoTraducible(nombres, "Enc_Nombre", "ui.nombre", 22, TextAnchor.UpperLeft, cab, ArribaIzq(24, 12, 300, 30));
+            b.TextoTraducible(estado, "Enc_Vida", "ui.vida", 22, TextAnchor.UpperLeft, cab, ArribaIzq(30, 12, 200, 30));
+            b.TextoTraducible(estado, "Enc_Energia", "ui.energia", 22, TextAnchor.UpperLeft, cab, ArribaIzq(380, 12, 200, 30));
+            b.TextoTraducible(estado, "Enc_Overdrive", "ui.overdrive", 22, TextAnchor.UpperLeft, cab, ArribaIzq(640, 12, 260, 30));
+            var encATB = b.TextoTraducible(estado, "Enc_ATB", "ui.atb", 22, TextAnchor.UpperLeft, cab, ArribaIzq(950, 12, 260, 30));
+            var encTurno = b.TextoTraducible(estado, "Enc_Turno", "ui.turno", 22, TextAnchor.UpperLeft, cab, ArribaIzq(950, 12, 260, 30));
+            if (EnJuego)
+            {
+                encATB.gameObject.SetActive(!bm.ModoTurnos);
+                encTurno.gameObject.SetActive(bm.ModoTurnos);
+            }
+            else encTurno.gameObject.SetActive(false);
 
-            int i = 0;
-            foreach (var u in bm.Jugadores)
+            // Filas: en el prefab se generan 3 (el tamaño del equipo). Las que sobren se ocultan.
+            int cantidad = EnJuego ? bm.Jugadores.Count : 3;
+            for (int i = 0; i < Mathf.Max(cantidad, 3); i++)
             {
                 float y = 50 + i * AltoFila;
-                var f = new Fila { u = u };
+                bool usar = i < cantidad;
+                if (!usar && nombres.Find("Nombre" + i) == null) continue;
 
-                var res = ArribaIzq(UIFactory.Rect("Resaltado", nombres), 8, y - 4, 584, AltoFila - 6);
-                f.resaltado = res.gameObject.AddComponent<Image>();
-                f.resaltado.color = new Color(1f, 1f, 1f, 0.12f);
-                f.resaltado.raycastTarget = false;
+                var f = new Fila { u = EnJuego && usar ? bm.Jugadores[i] : null };
+
+                var res = b.Rect(nombres, "Resaltado" + i, rt =>
+                {
+                    ArribaIzq(8, y - 4, 584, AltoFila - 6)(rt);
+                    var img = rt.gameObject.AddComponent<Image>();
+                    img.color = new Color(1f, 1f, 1f, 0.12f);
+                    img.raycastTarget = false;
+                });
+                f.resaltado = res.GetComponent<Image>();
+                f.nombre = b.Texto(nombres, "Nombre" + i, "Robot " + (i + 1), 34, TextAnchor.MiddleLeft, ColorTexto, ArribaIzq(24, y, 300, AltoFila - 14));
+                f.estados = b.Texto(nombres, "Estados" + i, "", 22, TextAnchor.MiddleRight, ColorTexto, ArribaIzq(300, y, 280, AltoFila - 14));
+                f.vida = b.Texto(estado, "Vida" + i, "350/350", 32, TextAnchor.UpperRight, ColorTexto, ArribaIzq(30, y, 300, 40));
+                f.barraVida = b.Barra(estado, "BarraVida" + i, ColorVida, ArribaIzq(30, y + 42, 300, 12));
+                f.energia = b.Texto(estado, "Energia" + i, "50/50", 32, TextAnchor.UpperRight, ColorTexto, ArribaIzq(380, y, 200, 40));
+                f.barraEnergia = b.Barra(estado, "BarraEnergia" + i, ColorEnergia, ArribaIzq(380, y + 42, 200, 12));
+                f.barraOD = b.Barra(estado, "BarraOD" + i, ColorOD, ArribaIzq(640, y + 16, 260, 24));
+                f.barraATB = b.Barra(estado, "BarraATB" + i, ColorATB, ArribaIzq(950, y + 16, 260, 24));
+
+                if (!EnJuego) continue;
+                if (!usar)
+                {
+                    // Fila sobrante del prefab: se oculta.
+                    foreach (var g in new Component[] { f.resaltado, f.nombre, f.estados, f.vida, f.energia })
+                        if (g != null) g.gameObject.SetActive(false);
+                    foreach (var barra in new[] { f.barraVida, f.barraEnergia, f.barraOD, f.barraATB })
+                        if (barra != null && barra.raiz != null) barra.raiz.gameObject.SetActive(false);
+                    continue;
+                }
                 f.resaltado.enabled = false;
-
-                f.nombre = T(nombres, u.Nombre, 34, TextAnchor.MiddleLeft);
-                ArribaIzq(f.nombre.rectTransform, 24, y, 300, AltoFila - 14);
-                f.estados = T(nombres, "", 22, TextAnchor.MiddleRight);
-                ArribaIzq(f.estados.rectTransform, 300, y, 280, AltoFila - 14);
-
-                f.vida = T(estado, "", 32, TextAnchor.UpperRight);
-                ArribaIzq(f.vida.rectTransform, 30, y, 300, 40);
-                f.barraVida = UIFactory.CrearBarra(estado, ColorVida);
-                ArribaIzq(f.barraVida.raiz, 30, y + 42, 300, 12);
-
-                f.energia = T(estado, "", 32, TextAnchor.UpperRight);
-                ArribaIzq(f.energia.rectTransform, 380, y, 200, 40);
-                f.barraEnergia = UIFactory.CrearBarra(estado, ColorEnergia);
-                ArribaIzq(f.barraEnergia.raiz, 380, y + 42, 200, 12);
-
-                f.barraOD = UIFactory.CrearBarra(estado, ColorOD);
-                ArribaIzq(f.barraOD.raiz, 640, y + 16, 260, 24);
-                f.barraATB = UIFactory.CrearBarra(estado, ColorATB);
-                ArribaIzq(f.barraATB.raiz, 950, y + 16, 260, 24);
-
+                f.nombre.text = f.u.Nombre;
+                f.cNombre = f.nombre.color;
+                f.cVida = f.vida.color;
+                f.cOD = f.barraOD.imagenRelleno != null ? f.barraOD.imagenRelleno.color : ColorOD;
+                f.cATB = f.barraATB.imagenRelleno != null ? f.barraATB.imagenRelleno.color : ColorATB;
                 filas.Add(f);
-                RegistrarUnidad(u);
-                i++;
+                RegistrarUnidad(f.u);
             }
         }
 
@@ -287,7 +346,7 @@ namespace TP4
                 e.grupo = e.rt.gameObject.AddComponent<CanvasGroup>();
                 e.nombre = T(e.rt, u.Nombre, jefe ? 32 : 24, TextAnchor.LowerCenter);
                 UIFactory.Ubicar(e.nombre.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(ancho, 34));
-                e.vida = UIFactory.CrearBarra(e.rt, new Color(1f, 0.35f, 0.3f));
+                e.vida = UIFactory.CrearBarra(e.rt, new Color(1f, 0.35f, 0.3f), vis);
                 UIFactory.Ubicar(e.vida.raiz, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 12), new Vector2(ancho - 20, jefe ? 14 : 10));
                 e.estados = T(e.rt, "", 18, TextAnchor.UpperCenter);
                 UIFactory.Ubicar(e.estados.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, -12), new Vector2(ancho, 22));
@@ -296,38 +355,34 @@ namespace TP4
             }
         }
 
-        void ConstruirVentanas()
+        void ConstruirVentanas(UIBuilder b)
         {
             float baseY = Margen + AltoPanel + 8;
 
-            ventanaComandos = (RectTransform)UIFactory.Ventana("VentanaComandos", principal, vis).transform;
-            UIFactory.Ubicar(ventanaComandos, Vector2.zero, Vector2.zero, new Vector2(Margen * 2 + 600, baseY), new Vector2(300, 200));
-            ventanaComandos.gameObject.SetActive(false);
+            ventanaComandos = b.Ventana(principal, "VentanaComandos", rt =>
+                UIFactory.Ubicar(rt, Vector2.zero, Vector2.zero, new Vector2(Margen * 2 + 600, baseY), new Vector2(300, 200)));
+            ventanaLista = b.Ventana(principal, "VentanaLista", rt =>
+                UIFactory.Ubicar(rt, Vector2.zero, Vector2.zero, new Vector2(Margen * 3 + 900, baseY), new Vector2(620, 200)));
+            ventanaObjetivos = b.Ventana(principal, "VentanaObjetivos", rt =>
+                UIFactory.Ubicar(rt, Vector2.zero, Vector2.zero, new Vector2(Margen, baseY), new Vector2(600, 200)));
 
-            ventanaLista = (RectTransform)UIFactory.Ventana("VentanaLista", principal, vis).transform;
-            UIFactory.Ubicar(ventanaLista, Vector2.zero, Vector2.zero, new Vector2(Margen * 3 + 900, baseY), new Vector2(620, 200));
-            ventanaLista.gameObject.SetActive(false);
+            barraAyuda = b.Ventana(principal, "Ayuda", rt =>
+                UIFactory.Ubicar(rt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -Margen), new Vector2(1000, 64)));
+            textoAyuda = b.Texto(barraAyuda, "TextoAyuda", "Descripción de la acción seleccionada.", 26, TextAnchor.MiddleCenter, ColorTexto,
+                rt =>
+                {
+                    UIFactory.Estirar(rt, 20, 20, 0, 0);
+                    rt.GetComponent<Text>().horizontalOverflow = HorizontalWrapMode.Wrap;
+                });
 
-            ventanaObjetivos = (RectTransform)UIFactory.Ventana("VentanaObjetivos", principal, vis).transform;
-            UIFactory.Ubicar(ventanaObjetivos, Vector2.zero, Vector2.zero, new Vector2(Margen, baseY), new Vector2(600, 200));
-            ventanaObjetivos.gameObject.SetActive(false);
+            barraAccion = b.Ventana(principal, "Accion", rt =>
+                UIFactory.Ubicar(rt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -Margen - 76), new Vector2(640, 60)));
+            textoAccion = b.Texto(barraAccion, "TextoAccion", "Nombre de la acción", 30, TextAnchor.MiddleCenter, ColorTexto, rt => UIFactory.Estirar(rt));
 
-            barraAyuda = (RectTransform)UIFactory.Ventana("Ayuda", principal, vis).transform;
-            UIFactory.Ubicar(barraAyuda, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -Margen), new Vector2(1500, 64));
-            textoAyuda = T(barraAyuda, "", 28, TextAnchor.MiddleCenter);
-            UIFactory.Estirar(textoAyuda.rectTransform, 20, 20, 0, 0);
-            barraAyuda.gameObject.SetActive(false);
-
-            barraAccion = (RectTransform)UIFactory.Ventana("Accion", principal, vis).transform;
-            UIFactory.Ubicar(barraAccion, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -Margen - 76), new Vector2(640, 60));
-            textoAccion = T(barraAccion, "", 30, TextAnchor.MiddleCenter);
-            UIFactory.Estirar(textoAccion.rectTransform);
-            barraAccion.gameObject.SetActive(false);
-
-            textoRonda = T(principal, "", 24, TextAnchor.UpperLeft, new Color(0.85f, 0.9f, 1f));
-            UIFactory.Ubicar(textoRonda.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -20), new Vector2(500, 40));
-            textoModo = T(principal, "", 22, TextAnchor.UpperRight, new Color(0.85f, 0.9f, 1f));
-            UIFactory.Ubicar(textoModo.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -20), new Vector2(600, 70));
+            textoRonda = b.TextoPlantilla(principal, "TextoRonda", "ui.ronda", "Ronda 1/3  ·  vs Rival  ·  Normal", 24, TextAnchor.UpperLeft, new Color(0.85f, 0.9f, 1f),
+                rt => UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -20), new Vector2(500, 40)));
+            textoModo = b.TextoPlantilla(principal, "TextoModo", "ui.turnoDe", "Turno: Vanguardia", 24, TextAnchor.UpperRight, new Color(0.85f, 0.9f, 1f),
+                rt => UIFactory.Ubicar(rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -20), new Vector2(430, 70)));
         }
 
         void RegistrarUnidad(BattleUnit u)
@@ -370,9 +425,9 @@ namespace TP4
                 var u = f.u;
                 bool esActivo = u == activo;
                 f.resaltado.enabled = esActivo;
-                f.nombre.color = !u.IsAlive ? new Color(1f, 0.35f, 0.35f) : esActivo ? ColorActivo : ColorTexto;
+                f.nombre.color = !u.IsAlive ? new Color(1f, 0.35f, 0.35f) : esActivo ? ColorActivo : f.cNombre;
                 f.vida.text = $"{u.Vida}/{u.VidaMax}";
-                f.vida.color = !u.IsAlive ? new Color(1f, 0.35f, 0.35f) : u.VidaPct < 0.25f ? new Color(1f, 0.85f, 0.3f) : ColorTexto;
+                f.vida.color = !u.IsAlive ? new Color(1f, 0.35f, 0.35f) : u.VidaPct < 0.25f ? new Color(1f, 0.85f, 0.3f) : f.cVida;
                 f.barraVida.Set(u.VidaPct);
                 f.energia.text = $"{u.Energia}/{u.EnergiaMax}";
                 f.barraEnergia.Set(u.EnergiaMax > 0 ? (float)u.Energia / u.EnergiaMax : 0f);
@@ -380,12 +435,13 @@ namespace TP4
                 f.barraOD.Set(u.Overdrive);
                 f.barraOD.imagenRelleno.color = u.Overdrive >= 1f
                     ? Color.Lerp(ColorODLleno, Color.white, (Mathf.Sin(Time.time * 8f) + 1f) * 0.25f)
-                    : ColorOD;
+                    : f.cOD;
 
                 f.barraATB.Set(Mathf.Max(0f, u.ATB));
-                f.barraATB.imagenRelleno.color = u.ATBCongelada ? ColorATBCongelada
+                f.barraATB.imagenRelleno.color = u.TieneEstadoLiberable ? new Color(0.4f, 0.95f, 1f)
+                    : u.ATBCongelada ? ColorATBCongelada
                     : u.ATB >= 1f ? Color.Lerp(ColorATBLleno, Color.white, (Mathf.Sin(Time.time * 6f) + 1f) * 0.2f)
-                    : ColorATB;
+                    : f.cATB;
 
                 f.estados.text = TextoEstados(u);
             }
@@ -425,12 +481,20 @@ namespace TP4
             foreach (var e in etiquetas)
             {
                 bool visible = APantalla(e.u.View.Arriba, out var local);
-                e.rt.anchoredPosition = local;
+                e.rt.anchoredPosition = LimitarEtiqueta(local);
                 float objetivoAlpha = visible && e.u.IsAlive ? 1f : 0f;
                 e.grupo.alpha = Mathf.MoveTowards(e.grupo.alpha, objetivoAlpha, Time.deltaTime * 2f);
                 e.vida.Set(e.u.VidaPct);
                 e.estados.text = TextoEstados(e.u);
             }
+        }
+
+        /// <summary>Evita que la etiqueta de un robot muy alto (el jefe) se salga por arriba de la pantalla.</summary>
+        Vector2 LimitarEtiqueta(Vector2 local)
+        {
+            float maxY = raiz.rect.height * 0.5f - 240f;
+            float maxX = raiz.rect.width * 0.5f - 230f;
+            return new Vector2(Mathf.Clamp(local.x, -maxX, maxX), Mathf.Min(local.y, maxY));
         }
 
         void ActualizarCursores()
@@ -457,8 +521,9 @@ namespace TP4
                 {
                     cursores[i].enabled = true;
                     // Si el objetivo es enemigo, el cursor va arriba de su etiqueta.
-                    float extra = objetivosResaltados[i].Team == Team.Enemigo ? 70f : 10f;
-                    cursores[i].rectTransform.anchoredPosition = p + new Vector2(0, extra + bob);
+                    bool enemigo = objetivosResaltados[i].Team == Team.Enemigo;
+                    if (enemigo) p = LimitarEtiqueta(p);
+                    cursores[i].rectTransform.anchoredPosition = p + new Vector2(0, (enemigo ? 70f : 10f) + bob);
                 }
                 else cursores[i].enabled = false;
             }
@@ -535,6 +600,18 @@ namespace TP4
                 ayuda = Loc.T("cmd.items.ayuda"),
                 alConfirmar = () => AbrirItems(u, idxItems)
             });
+            // Liberar: solo aparece si algún aliado quedó atrapado (ej: Red eléctrica del jefe).
+            var liberar = GameSession.Torneo != null ? GameSession.Torneo.accionLiberar : null;
+            if (liberar != null && bm.Vivos(u.Team).Exists(a => a != u && a.TieneEstadoLiberable))
+            {
+                ops.Add(new Opcion
+                {
+                    texto = Loc.T("cmd.liberar"),
+                    color = new Color(0.5f, 1f, 1f),
+                    ayuda = Loc.T("cmd.liberar.ayuda"),
+                    alConfirmar = () => Elegir(liberar, () => AbrirComandos(u, 0))
+                });
+            }
             if (bm.ListosJugador.Count > 1)
             {
                 ops.Add(new Opcion
@@ -613,8 +690,14 @@ namespace TP4
                     break;
                 }
                 case TargetMode.AliadoUnico:
-                    foreach (var v in bm.Vivos(activo.Team)) AgregarOpcionObjetivo(ops, v, $"{v.Vida}/{v.VidaMax}");
+                {
+                    var aliados = bm.Vivos(activo.Team);
+                    // "Liberar" solo puede apuntar a aliados atrapados.
+                    if (accion.efectos.Exists(e => e.tipo == EffectType.Liberar))
+                        aliados = aliados.FindAll(a => a.TieneEstadoLiberable);
+                    foreach (var v in aliados) AgregarOpcionObjetivo(ops, v, $"{v.Vida}/{v.VidaMax}");
                     break;
+                }
 
                 case TargetMode.TodosEnemigos:
                 case TargetMode.TodosAliados:
@@ -698,7 +781,8 @@ namespace TP4
             contenido = UIFactory.Estirar(UIFactory.Rect("Contenido", ventana));
 
             float alto = 24 + ops.Count * AltoOpcion;
-            ventana.sizeDelta = new Vector2(ancho, alto);
+            float anchoReal = ventana.sizeDelta.x > 1f ? ventana.sizeDelta.x : ancho;
+            ventana.sizeDelta = new Vector2(anchoReal, alto);
             ventana.gameObject.SetActive(true);
 
             var botones = new List<Button>();
@@ -810,7 +894,13 @@ namespace TP4
         // =====================================================================
         // API usada por el BattleManager
         // =====================================================================
-        public void SetRonda(string texto) => textoRonda.text = texto;
+        /// <summary>Completa la plantilla del texto de ronda (editable en el prefab, componente TextoLoc).</summary>
+        public void SetRonda(params object[] valores)
+        {
+            var loc = textoRonda.GetComponent<TextoLoc>();
+            if (loc != null && loc.esPlantilla) loc.Formatear(valores);
+            else textoRonda.text = Loc.T("ui.ronda", valores);
+        }
 
         /// <summary>Hay un submenú (Módulos/Ítems) o una selección de objetivo abierta.</summary>
         public bool EnSubmenu => modo == Modo.Lista || modo == Modo.Objetivo;
@@ -818,12 +908,17 @@ namespace TP4
         /// <summary>Hay algún menú de órdenes abierto.</summary>
         public bool EsperandoOrden => modo != Modo.Nada;
 
+        /// <summary>Arriba a la derecha: "Turno: X" con el robot al que le toca (plantilla editable en el prefab).</summary>
         void ActualizarModoATB()
         {
-            string modo = bm.ModoTurnos
-                ? $"{Loc.T("ui.modoTurnos")}  ·  {Loc.T(bm.FaseDe == Team.Jugador ? "ui.fase.jugador" : "ui.fase.enemigo")}"
-                : Loc.T("ui.atb.activa");
-            string texto = $"<color=#FFE070>{modo}</color>\n<size=18>{Loc.T("pausa.hint")}</size>";
+            var u = bm.UnidadEnTurno;
+            string nombre = u == null ? "—"
+                : $"<color=#{(u.EsJugador ? "8FE8FF" : "FF8A80")}>{u.Nombre}</color>";
+            var loc = textoModo.GetComponent<TextoLoc>();
+            string plantilla = loc != null && loc.esPlantilla ? loc.Plantilla : Loc.T("ui.turnoDe");
+            string texto;
+            try { texto = string.Format(plantilla, nombre); }
+            catch (FormatException) { texto = plantilla; }
             if (textoModo.text != texto) textoModo.text = texto;
         }
 
@@ -928,13 +1023,9 @@ namespace TP4
             CerrarMenus();
             panelFin.gameObject.SetActive(true);
 
-            var titulo = panelFin.Find("Titulo");
-            if (titulo != null) Destroy(titulo.gameObject);
-            string texto = victoria ? (ultimaPelea ? Loc.T("msg.campeonTorneo") : Loc.T("msg.victoria")) : Loc.T("msg.derrota");
-            var t = T(panelFin, texto, 54, TextAnchor.MiddleCenter, victoria ? ColorActivo : new Color(1f, 0.4f, 0.4f));
-            t.name = "Titulo";
-            t.fontStyle = FontStyle.Bold;
-            UIFactory.Ubicar(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(680, 80));
+            tituloFin.text = victoria ? (ultimaPelea ? Loc.T("msg.campeonTorneo") : Loc.T("msg.victoria")) : Loc.T("msg.derrota");
+            tituloFin.color = victoria ? ColorActivo : new Color(1f, 0.4f, 0.4f);
+            subtituloFin.text = victoria ? "" : Loc.T("msg.derrota.sub");
 
             var ops = new List<Opcion>();
             if (victoria && !ultimaPelea)
@@ -942,25 +1033,11 @@ namespace TP4
             else
                 ops.Add(new Opcion { texto = Loc.T("fin.menu"), alConfirmar = bm.VolverAlMenu });
 
-            var sub = panelFin.Find("Subtitulo");
-            if (sub != null) Destroy(sub.gameObject);
-            if (!victoria)
-            {
-                var st = T(panelFin, Loc.T("msg.derrota.sub"), 24, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 1f));
-                st.name = "Subtitulo";
-                UIFactory.Ubicar(st.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(680, 40));
-            }
-
-            // Contenedor de opciones debajo del título
-            var cont = panelFin.Find("Opciones") as RectTransform;
-            if (cont == null)
-            {
-                cont = UIFactory.Rect("Opciones", panelFin);
-                UIFactory.Ubicar(cont, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(420, 200));
-            }
+            var cont = opcionesFinRect;
+            Vector2 posOpciones = cont.anchoredPosition;
             MostrarOpciones(cont, 420, ops, null, 0, opcionesFin);
-            // MostrarOpciones redimensiona el contenedor; lo re-anclamos abajo.
-            cont.anchoredPosition = new Vector2(0, 30);
+            // MostrarOpciones redimensiona el contenedor; se mantiene donde lo dejaste en el editor.
+            cont.anchoredPosition = posOpciones;
         }
     }
 }

@@ -15,7 +15,7 @@ namespace TP4
         public static bool Abierta { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void Reset() => Abierta = false;
+        static void ReiniciarEstado() => Abierta = false;
 
         enum Pantalla { Principal, Opciones, Confirmar }
 
@@ -34,42 +34,57 @@ namespace TP4
 
         public static PauseMenu Crear(BattleManager bm, BattleVisuals vis)
         {
-            var go = new GameObject("PauseMenu");
-            var canvas = go.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 30;
-            var scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-            go.AddComponent<GraphicRaycaster>();
+            // Si existe el prefab editable (TP4 > Generar UI editable) se usa ese; si no, se arma por código.
+            GameObject go = vis != null && vis.prefabUIPausa != null ? Instantiate(vis.prefabUIPausa) : new GameObject("PauseMenu");
+            go.name = "PauseMenu";
+            var raiz = UIFactory.AsegurarCanvas(go, 30);
 
-            var p = go.AddComponent<PauseMenu>();
+            var p = UIBuilder.Componente<PauseMenu>(go);
             p.bm = bm;
             p.vis = vis;
             p.fuente = vis != null && vis.fuente != null ? vis.fuente : UIFactory.FuentePorDefecto;
-            p.Construir((RectTransform)go.transform);
+            p.Construir(raiz, true);
             return p;
         }
 
-        void Construir(RectTransform raiz)
+        /// <summary>Editor: arma el menú de pausa (visible) para guardarlo como prefab editable.</summary>
+        public static GameObject GenerarPlantilla(BattleVisuals vis, GameObject existente = null)
         {
-            contenido = UIFactory.Estirar(UIFactory.Rect("Contenido", raiz));
-            var fondo = contenido.gameObject.AddComponent<Image>();
-            fondo.color = new Color(0f, 0f, 0.05f, 0.7f);
+            var go = existente != null ? existente : new GameObject("UI_Pausa");
+            var raiz = UIFactory.AsegurarCanvas(go, 30);
+            var p = go.AddComponent<PauseMenu>();
+            p.vis = vis;
+            p.fuente = vis != null && vis.fuente != null ? vis.fuente : UIFactory.FuentePorDefecto;
+            p.Construir(raiz, false);
+            DestroyImmediate(p);
+            return go;
+        }
 
-            titulo = UIFactory.Texto(contenido, "", 64, TextAnchor.MiddleCenter, Color.white, fuente);
-            titulo.fontStyle = FontStyle.Bold;
-            UIFactory.Ubicar(titulo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), new Vector2(0, 170), new Vector2(1200, 90));
+        void Construir(RectTransform raiz, bool enJuego)
+        {
+            var b = new UIBuilder(vis);
+            contenido = b.Rect(raiz, "Contenido", rt =>
+            {
+                UIFactory.Estirar(rt);
+                rt.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0.05f, 0.7f);
+            });
 
-            ventana = (RectTransform)UIFactory.Ventana("Ventana", contenido, vis).transform;
-            UIFactory.Ubicar(ventana, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), new Vector2(0, 150), new Vector2(600, 200));
+            titulo = b.Texto(contenido, "Titulo", "PAUSA", 64, TextAnchor.MiddleCenter, Color.white, rt =>
+            {
+                UIFactory.Ubicar(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), new Vector2(0, 170), new Vector2(1200, 90));
+                rt.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            });
+
+            ventana = b.Ventana(contenido, "Ventana", rt =>
+                UIFactory.Ubicar(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), new Vector2(0, 150), new Vector2(600, 200)));
+
+            ayuda = b.Texto(contenido, "Ayuda", "Descripción de la opción seleccionada.", 28, TextAnchor.MiddleCenter, new Color(0.85f, 0.9f, 1f),
+                rt => UIFactory.Ubicar(rt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 80), new Vector2(1600, 50)));
+
+            if (!enJuego) return;
             lista = MenuLista.Crear(ventana, fuente);
             lista.alMostrarAyuda = t => ayuda.text = t ?? "";
-
-            ayuda = UIFactory.Texto(contenido, "", 28, TextAnchor.MiddleCenter, new Color(0.85f, 0.9f, 1f), fuente);
-            UIFactory.Ubicar(ayuda.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 80), new Vector2(1600, 50));
-
+            ayuda.text = "";
             contenido.gameObject.SetActive(false);
             Ajustes.Cambio += AlCambiarAjustes;
         }

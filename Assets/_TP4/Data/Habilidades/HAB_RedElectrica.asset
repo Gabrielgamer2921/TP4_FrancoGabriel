@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7d80f518fdeb2c4f9b14435026f5d2b, type: 3}
+  m_Name: HAB_RedElectrica
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
+  nombre: "Red el\xE9ctrica"
+  descripcion: "Atrapa a un robot en una red electrificada: no puede actuar y recibe
+    da\xF1o. Un aliado puede liberarlo."
+  nombreEN: Electric net
+  descripcionEN: 'Traps a robot in an electrified net: it can''t act and takes damage.
+    An ally can free it.'
+  icono: {fileID: 0}
+  objetivo: 0
+  recuperacion: 1.2
+  efectos:
+  - tipo: 1
+    potencia: 0.9
+    valorFijo: 0
+    modificador:
+      stat: 0
+      porcentaje: 0
+    duracion: 15
+    estado: {fileID: 0}
+    probabilidad: 1
+  - tipo: 6
+    potencia: 1
+    valorFijo: 0
+    modificador:
+      stat: 0
+      porcentaje: 0
+    duracion: 15
+    estado: {fileID: 11400000, guid: 430ca1ef3e9f3194e88721b89b0bad81, type: 2}
+    probabilidad: 1
+  animacion: 1
+  cuerpoACuerpo: 0
+  colorEfecto: {r: 0.4, g: 0.95, b: 1, a: 1}
+  vfxLanzamiento: {fileID: 0}
+  vfxImpacto: {fileID: 0}
+  sfxLanzamiento: {fileID: 0}
+  sfxImpacto: {fileID: 0}
+  esCinematica: 0
+  duracionCinematica: 2.5
+  costoEnergia: 25
+  esOverdrive: 0
+  enfriamiento: 3

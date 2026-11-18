@@ -17,6 +17,13 @@ namespace TP4
 
         [Header("UI")]
         public Font fuente;
+        [Tooltip("Prefabs de UI editables (TP4 > Generar UI editable). Si están vacíos, la UI se arma por código.")]
+        public GameObject prefabUICombate;
+        public GameObject prefabUIMenu;
+        public GameObject prefabUIPausa;
+        [Tooltip("Sprites de degradé de las ventanas y barras (se generan como assets).")]
+        public Sprite spriteVentana;
+        public Sprite spriteRelleno;
         public Color colorPanelArriba = new Color(0.16f, 0.24f, 0.72f, 0.97f);
         public Color colorPanelAbajo = new Color(0.03f, 0.05f, 0.28f, 0.97f);
         public Color colorBorde = new Color(0.85f, 0.88f, 0.95f, 1f);

@@ -17,6 +17,11 @@ MonoBehaviour:
   materialTrail: {fileID: 2100000, guid: 5b81f0649af20444aaa80681b91f2a93, type: 2}
   materialPiso: {fileID: 2100000, guid: 364f4e432f579264caa97affb8e15725, type: 2}
   fuente: {fileID: 0}
+  prefabUICombate: {fileID: 657884284283098455, guid: 13940e8de9994744ab22b74e93c8767c, type: 3}
+  prefabUIMenu: {fileID: 6884966047776643081, guid: 3c24f7ef3aade77478ce3a4eee03d2b4, type: 3}
+  prefabUIPausa: {fileID: 2068953606703627889, guid: de2d1a6f23c1d2243a0c67f087c5ecab, type: 3}
+  spriteVentana: {fileID: 21300000, guid: ec2b489265872c64d8d64dcb4af02fba, type: 3}
+  spriteRelleno: {fileID: 21300000, guid: d44ebf5d123d99446aaca2ab222ef9cd, type: 3}
   colorPanelArriba: {r: 0.16, g: 0.24, b: 0.72, a: 0.97}
   colorPanelAbajo: {r: 0.03, g: 0.05, b: 0.28, a: 0.97}
   colorBorde: {r: 0.85, g: 0.88, b: 0.95, a: 1}
@@ -32,6 +37,7 @@ MonoBehaviour:
   sfxVictoria: {fileID: 0}
   sfxDerrota: {fileID: 0}
   sfxOverdrive: {fileID: 0}
+  musicaMenu: {fileID: 0}
   musicaCombate: {fileID: 0}
   musicaJefe: {fileID: 0}
   volumenMusica: 0.5

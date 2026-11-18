@@ -47,7 +47,8 @@ namespace TP4
         [InspectorName("Aplicar estado")] AplicarEstado,
         [InspectorName("Limpiar estados")] LimpiarEstados,
         [InspectorName("Modificar ATB")] ModificarATB,
-        [InspectorName("Provocar")] Provocar
+        [InspectorName("Provocar")] Provocar,
+        [InspectorName("Liberar (quita estados liberables)")] Liberar
     }
 
     /// <summary>

@@ -53,6 +53,23 @@ namespace TP4
         /// </summary>
         public bool ModoTurnos { get; private set; }
 
+        BattleUnit turnoActual;
+        BattleUnit actorEjecutando;
+
+        /// <summary>
+        /// El robot al que le toca ahora: por turnos, el que está jugando su turno;
+        /// en ATB, el que está ejecutando una acción o, si no, el primero esperando una orden.
+        /// </summary>
+        public BattleUnit UnidadEnTurno
+        {
+            get
+            {
+                if (ModoTurnos) return turnoActual != null && turnoActual.IsAlive ? turnoActual : null;
+                if (actorEjecutando != null) return actorEjecutando;
+                return ListosJugador.Count > 0 ? ListosJugador[0] : null;
+            }
+        }
+
         /// <summary>Modo por turnos: de quién es la fase actual.</summary>
         public Team FaseDe { get; private set; } = Team.Jugador;
 
@@ -110,6 +127,15 @@ namespace TP4
             if (camara == null && Camera.main != null) camara = Camera.main.GetComponent<BattleCamera>();
 
             GameSession.AsegurarIniciada(torneo);
+#if UNITY_EDITOR
+            // Menú TP4 > Probar pelea N: arranca directo en esa pelea.
+            int prueba = UnityEditor.EditorPrefs.GetInt("tp4.peleaPrueba", -1);
+            if (prueba >= 0)
+            {
+                UnityEditor.EditorPrefs.DeleteKey("tp4.peleaPrueba");
+                GameSession.SaltarAPelea(prueba);
+            }
+#endif
             Encuentro = GameSession.PeleaData;
             if (Encuentro == null)
             {
@@ -139,8 +165,8 @@ namespace TP4
         public void RefrescarTextos()
         {
             if (UI == null || Encuentro == null) return;
-            UI.SetRonda(Loc.T("ui.ronda", GameSession.PeleaActual + 1, torneo.peleas.Count, Encuentro.NombreRival,
-                Loc.NombreDificultad(GameSession.Dificultad)));
+            UI.SetRonda(GameSession.PeleaActual + 1, torneo.peleas.Count, Encuentro.NombreRival,
+                Loc.NombreDificultad(GameSession.Dificultad));
         }
 
         IEnumerator Intro()
@@ -195,6 +221,7 @@ namespace TP4
 
         IEnumerator TurnoDe(BattleUnit u)
         {
+            turnoActual = u;
             // Los estados avanzan al empezar el turno (la quemadura puede rematarlo).
             u.AvanzarTurno(SegundosPorTurno);
             if (!u.IsAlive || Fase != BattlePhase.EnCurso) yield break;
@@ -202,15 +229,18 @@ namespace TP4
             // La parálisis le hace perder el turno.
             if (u.ATBCongelada)
             {
-                UI.Popup(u, Loc.T("msg.pierdeTurno"), new Color(1f, 0.95f, 0.3f), 30);
+                UI.Popup(u, Loc.T(u.TieneEstadoLiberable ? "msg.atrapado" : "msg.pierdeTurno"), new Color(1f, 0.95f, 0.3f), 30);
                 yield return new WaitForSeconds(0.7f);
                 yield break;
             }
 
-            bool repetir = true;
-            while (repetir && u.IsAlive && Fase == BattlePhase.EnCurso)
+            // El jefe puede tener varias acciones por turno; Overclock suma una extra.
+            int restantes = u.AccionesPorTurno;
+            while (restantes > 0 && u.IsAlive && Fase == BattlePhase.EnCurso)
             {
-                repetir = false;
+                restantes--;
+                // Si quedó atrapado/paralizado entre una acción y otra, pierde el resto del turno.
+                if (u.ATBCongelada) yield break;
                 if (u.EsJugador)
                 {
                     u.State = UnitState.Listo;
@@ -232,8 +262,9 @@ namespace TP4
                 if (u.AccionExtra && u.IsAlive)
                 {
                     u.AccionExtra = false;
-                    repetir = true;
+                    restantes++;
                 }
+                if (restantes > 0) yield return new WaitForSeconds(0.3f);
             }
         }
 
@@ -280,6 +311,15 @@ namespace TP4
             view.Construir(unit, visuales);
 
             unit.Died += AlMorir;
+            unit.EstadoAplicado += (u, estado) =>
+            {
+                // Feedback claro de la Red eléctrica: cartel + cómo salir.
+                if (estado.liberable && u.EsJugador)
+                {
+                    UI.Banner(Loc.T("msg.redBanner", u.Nombre), 2f, new Color(0.5f, 0.95f, 1f));
+                    if (camara != null) camara.Shake(0.15f, 0.3f);
+                }
+            };
             unit.PhaseTriggered += (u, fase) =>
             {
                 UI.Banner(fase.Mensaje, 1.4f, new Color(1f, 0.4f, 0.3f));
@@ -372,6 +412,7 @@ namespace TP4
             }
 
             actor.State = UnitState.Actuando;
+            actorEjecutando = actor;
             if (hab != null)
             {
                 if (hab.esOverdrive) actor.VaciarOverdrive();
@@ -413,7 +454,13 @@ namespace TP4
                 PausaCinematica = false;
             }
 
+            // Memoria para la IA (para que no repita siempre lo mismo).
+            actor.RachaSoporte = accion.HaceDano ? 0 : actor.RachaSoporte + 1;
+            actor.UltimaAccion = accion;
+            actor.RegistrarUso(accion);
+
             actor.TerminarAccion(accion.recuperacion);
+            actorEjecutando = null;
             ejecutando = false;
             RevisarFin();
         }
@@ -497,6 +544,10 @@ namespace TP4
                         break;
                     case EffectType.Provocar:
                         t.Provocar(e.duracion);
+                        break;
+                    case EffectType.Liberar:
+                        t.Liberar();
+                        Sfx.Play(accion.sfxImpacto, SfxId.Curar, 0.8f);
                         break;
                 }
             }

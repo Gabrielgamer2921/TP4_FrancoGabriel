@@ -21,7 +21,7 @@ namespace TP4
         enum Pantalla { Principal, Dificultad, Opciones }
 
         Font fuente;
-        Text titulo, subtitulo, encabezado, ayuda, controles;
+        Text encabezado, ayuda;
         RectTransform ventana;
         MenuLista lista;
         Pantalla pantalla;
@@ -79,61 +79,74 @@ namespace TP4
         // ---------------------------------------------------------------------
         void ConstruirUI()
         {
-            var go = new GameObject("MenuUI");
-            var canvas = go.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            var scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-            go.AddComponent<GraphicRaycaster>();
-            var raiz = (RectTransform)go.transform;
-
-            // Degradé oscuro a la izquierda para que se lea el menú
-            var sombra = UIFactory.Rect("Sombra", raiz);
-            sombra.anchorMin = new Vector2(0, 0);
-            sombra.anchorMax = new Vector2(0.55f, 1);
-            sombra.offsetMin = sombra.offsetMax = Vector2.zero;
-            var sombraImg = sombra.gameObject.AddComponent<Image>();
-            sombraImg.color = new Color(0f, 0f, 0.06f, 0.55f);
-            sombraImg.raycastTarget = false;
-
-            titulo = UIFactory.Texto(raiz, "", 96, TextAnchor.UpperLeft, new Color(1f, 0.92f, 0.5f), fuente);
-            titulo.fontStyle = FontStyle.Bold;
-            UIFactory.Ubicar(titulo.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(90, -80), new Vector2(1100, 120));
-
-            subtitulo = UIFactory.Texto(raiz, "", 34, TextAnchor.UpperLeft, new Color(0.6f, 0.9f, 1f), fuente);
-            UIFactory.Ubicar(subtitulo.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(96, -200), new Vector2(1000, 50));
-
-            encabezado = UIFactory.Texto(raiz, "", 34, TextAnchor.LowerLeft, Color.white, fuente);
-            UIFactory.Ubicar(encabezado.rectTransform, new Vector2(0, 1), new Vector2(0, 0), new Vector2(96, -360), new Vector2(900, 50));
-
-            ventana = (RectTransform)UIFactory.Ventana("Menu", raiz, visuales).transform;
-            UIFactory.Ubicar(ventana, new Vector2(0, 1), new Vector2(0, 1), new Vector2(90, -370), new Vector2(560, 200));
-            lista = MenuLista.Crear(ventana, fuente);
-            lista.alMostrarAyuda = t => ayuda.text = t ?? "";
-
-            ayuda = UIFactory.Texto(raiz, "", 28, TextAnchor.UpperLeft, new Color(0.85f, 0.9f, 1f), fuente);
-            ayuda.horizontalOverflow = HorizontalWrapMode.Wrap;
-            UIFactory.Ubicar(ayuda.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(96, 110), new Vector2(900, 80));
-
-            controles = UIFactory.Texto(raiz, "", 20, TextAnchor.LowerCenter, new Color(0.7f, 0.75f, 0.9f), fuente);
-            UIFactory.Ubicar(controles.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 24), new Vector2(1800, 30));
-
-            RefrescarTextosFijos();
+            // Si existe el prefab editable (TP4 > Generar UI editable) se usa ese; si no, se arma por código.
+            GameObject go = visuales != null && visuales.prefabUIMenu != null ? Instantiate(visuales.prefabUIMenu) : new GameObject("MenuUI");
+            go.name = "MenuUI";
+            var raiz = UIFactory.AsegurarCanvas(go, 0);
+            Armar(raiz, new UIBuilder(visuales), this);
         }
 
-        void RefrescarTextosFijos()
+        /// <summary>Editor: arma la UI del menú para guardarla como prefab editable.</summary>
+        public static GameObject GenerarPlantilla(BattleVisuals vis, GameObject existente = null)
         {
-            titulo.text = Loc.T("titulo");
-            subtitulo.text = Loc.T("subtitulo");
-            controles.text = Loc.T("menu.controles");
+            var go = existente != null ? existente : new GameObject("UI_Menu");
+            var raiz = UIFactory.AsegurarCanvas(go, 0);
+            Armar(raiz, new UIBuilder(vis), null);
+            return go;
+        }
+
+        /// <summary>Busca o crea cada elemento (los que existen en el prefab se respetan como estén).</summary>
+        static void Armar(RectTransform raiz, UIBuilder b, MainMenu m)
+        {
+            // Degradé oscuro a la izquierda para que se lea el menú
+            b.Rect(raiz, "Sombra", rt =>
+            {
+                rt.anchorMin = new Vector2(0, 0);
+                rt.anchorMax = new Vector2(0.55f, 1);
+                rt.offsetMin = rt.offsetMax = Vector2.zero;
+                var img = rt.gameObject.AddComponent<Image>();
+                img.color = new Color(0f, 0f, 0.06f, 0.55f);
+                img.raycastTarget = false;
+            });
+
+            var titulo = b.TextoTraducible(raiz, "Titulo", "titulo", 96, TextAnchor.UpperLeft, new Color(1f, 0.92f, 0.5f),
+                rt =>
+                {
+                    UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(90, -80), new Vector2(1100, 120));
+                    rt.GetComponent<Text>().fontStyle = FontStyle.Bold;
+                });
+            b.TextoTraducible(raiz, "Subtitulo", "subtitulo", 34, TextAnchor.UpperLeft, new Color(0.6f, 0.9f, 1f),
+                rt => UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(96, -200), new Vector2(1000, 50)));
+
+            var encabezado = b.Texto(raiz, "Encabezado", "Elegí la dificultad", 34, TextAnchor.LowerLeft, Color.white,
+                rt => UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 0), new Vector2(96, -360), new Vector2(900, 50)));
+
+            var ventana = b.Ventana(raiz, "Menu", rt =>
+                UIFactory.Ubicar(rt, new Vector2(0, 1), new Vector2(0, 1), new Vector2(90, -370), new Vector2(560, 200)));
+
+            var ayuda = b.Texto(raiz, "Ayuda", "Descripción de la opción seleccionada.", 28, TextAnchor.UpperLeft, new Color(0.85f, 0.9f, 1f),
+                rt =>
+                {
+                    UIFactory.Ubicar(rt, new Vector2(0, 0), new Vector2(0, 0), new Vector2(96, 110), new Vector2(900, 80));
+                    rt.GetComponent<Text>().horizontalOverflow = HorizontalWrapMode.Wrap;
+                });
+
+            b.TextoTraducible(raiz, "Controles", "menu.controles", 20, TextAnchor.LowerCenter, new Color(0.7f, 0.75f, 0.9f),
+                rt => UIFactory.Ubicar(rt, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 24), new Vector2(1800, 30)));
+
+            if (m == null) return;
+            m.encabezado = encabezado;
+            m.ayuda = ayuda;
+            m.ventana = ventana;
+            m.lista = MenuLista.Crear(ventana, m.fuente);
+            m.lista.alMostrarAyuda = t => m.ayuda.text = t ?? "";
+            m.encabezado.text = "";
+            m.ayuda.text = "";
         }
 
         void AlCambiarAjustes()
         {
             if (Ajustes.Idioma == idiomaMostrado) return;
-            RefrescarTextosFijos();
             if (pantalla == Pantalla.Opciones) MostrarOpciones(lista.IndiceActual);
         }
 

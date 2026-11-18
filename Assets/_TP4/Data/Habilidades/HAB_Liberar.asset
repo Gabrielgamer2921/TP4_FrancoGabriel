@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7d80f518fdeb2c4f9b14435026f5d2b, type: 3}
+  m_Name: HAB_Liberar
+  m_EditorClassIdentifier: Assembly-CSharp::TP4.AbilityData
+  nombre: Liberar
+  descripcion: "Libera a un aliado atrapado en la red el\xE9ctrica. Gasta el turno."
+  nombreEN: Free
+  descripcionEN: Frees an ally caught in the electric net. Uses up the turn.
+  icono: {fileID: 0}
+  objetivo: 1
+  recuperacion: 1
+  efectos:
+  - tipo: 10
+    potencia: 1
+    valorFijo: 0
+    modificador:
+      stat: 0
+      porcentaje: 0
+    duracion: 15
+    estado: {fileID: 0}
+    probabilidad: 1
+  animacion: 2
+  cuerpoACuerpo: 0
+  colorEfecto: {r: 0.5, g: 1, b: 1, a: 1}
+  vfxLanzamiento: {fileID: 0}
+  vfxImpacto: {fileID: 0}
+  sfxLanzamiento: {fileID: 0}
+  sfxImpacto: {fileID: 0}
+  esCinematica: 0
+  duracionCinematica: 2.5
+  costoEnergia: 0
+  esOverdrive: 0

@@ -21,6 +21,8 @@ namespace TP4
         [Min(1)] public int tamanoEquipo = 3;
         [Tooltip("Peleas en orden. La última suele ser el jefe.")]
         public List<EncounterData> peleas = new List<EncounterData>();
+        [Tooltip("Acción común 'Liberar' (aparece en el menú cuando un aliado está atrapado, ej: Red eléctrica).")]
+        public AbilityData accionLiberar;
         [Tooltip("Inventario con el que arranca el torneo. No se repone entre peleas.")]
         public List<ItemStack> inventarioInicial = new List<ItemStack>();
 

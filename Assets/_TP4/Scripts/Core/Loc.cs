@@ -30,10 +30,10 @@ namespace TP4
             { "dif.Normal", new[] { "Normal", "Normal" } },
             { "dif.Dificil", new[] { "Difícil", "Hard" } },
             { "dif.Mecha", new[] { "Mecha", "Mecha" } },
-            { "dif.Facil.ayuda", new[] { "Los rivales tienen 25% menos de stats.", "Rivals have 25% lower stats." } },
-            { "dif.Normal.ayuda", new[] { "Los rivales tienen sus stats normales.", "Rivals have their normal stats." } },
-            { "dif.Dificil.ayuda", new[] { "Los rivales tienen 25% más de stats.", "Rivals have 25% higher stats." } },
-            { "dif.Mecha.ayuda", new[] { "Los rivales tienen 50% más de stats. Sin piedad.", "Rivals have 50% higher stats. No mercy." } },
+            { "dif.Facil.ayuda", new[] { "Para jugadores poco experimentados en combates por turnos.", "For players with little experience in turn-based combat." } },
+            { "dif.Normal.ayuda", new[] { "Una experiencia balanceada para el combate por turnos.", "A balanced turn-based combat experience." } },
+            { "dif.Dificil.ayuda", new[] { "Para aquellos jugadores que busquen un desafío más intenso.", "For players looking for a more intense challenge." } },
+            { "dif.Mecha.ayuda", new[] { "El desafío final para aquellos que desean un verdadero reto.", "The ultimate challenge for those who want a true test." } },
 
             // ---------- Opciones ----------
             { "op.titulo", new[] { "Opciones", "Options" } },
@@ -75,7 +75,8 @@ namespace TP4
             { "turno.enemigo", new[] { "TURNO RIVAL", "ENEMY TURN" } },
             { "msg.pierdeTurno", new[] { "¡Paralizado!", "Paralyzed!" } },
             { "msg.accionExtra", new[] { "¡Acción extra!", "Extra action!" } },
-            { "ui.ronda", new[] { "Ronda {0}/{1}  ·  vs {2}  ·  {3}", "Round {0}/{1}  ·  vs {2}  ·  {3}" } },
+            { "ui.ronda", new[] { "Ronda {0}/{1} - {3}", "Round {0}/{1} - {3}" } },
+            { "ui.turnoDe", new[] { "Turno: {0}", "Turn: {0}" } },
 
             // ---------- Combate: comandos ----------
             { "cmd.atacar", new[] { "Atacar", "Attack" } },
@@ -86,6 +87,12 @@ namespace TP4
             { "cmd.items.ayuda", new[] { "Inventario compartido del equipo.", "Team's shared inventory." } },
             { "cmd.cambiar", new[] { "Cambiar ►", "Switch ►" } },
             { "cmd.cambiar.ayuda", new[] { "Pasar el turno a otro robot listo.", "Pass the turn to another ready robot." } },
+            { "cmd.liberar", new[] { "Liberar", "Free" } },
+            { "cmd.liberar.ayuda", new[] { "Liberar a un aliado atrapado en la red eléctrica. Gasta el turno.", "Free an ally caught in the electric net. Uses up the turn." } },
+            { "msg.liberado", new[] { "¡Liberado!", "Freed!" } },
+            { "msg.redBanner", new[] { "¡{0} quedó atrapado en la Red eléctrica!\n<size=32>No puede actuar. Otro robot puede usar \"Liberar\" (gasta su turno).</size>",
+                                       "{0} is caught in the Electric net!\n<size=32>It can't act. Another robot can use \"Free\" (uses up its turn).</size>" } },
+            { "msg.atrapado", new[] { "¡Atrapado!", "Trapped!" } },
             { "cmd.lento", new[] { "(lento)", "(slow)" } },
             { "cmd.rapido", new[] { "(rápido)", "(fast)" } },
             { "obj.enemigos", new[] { "Todos los enemigos", "All enemies" } },
@@ -114,6 +121,9 @@ namespace TP4
             { "stat.Magia", new[] { "MAG", "MAG" } },
             { "stat.Defensa", new[] { "DEF", "DEF" } },
         };
+
+        public static string Es(string clave) => tabla.TryGetValue(clave, out var v) ? v[0] : clave;
+        public static string En(string clave) => tabla.TryGetValue(clave, out var v) ? v[1] : clave;
 
         public static string T(string clave)
         {

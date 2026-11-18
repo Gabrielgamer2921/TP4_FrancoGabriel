@@ -22,6 +22,7 @@ namespace TP4.EditorTools
         const string Datos = Raiz + "/Data";
         const string Escena = Raiz + "/Scenes/Combate.unity";
         const string EscenaMenu = Raiz + "/Scenes/MenuPrincipal.unity";
+        static readonly Vector3 PosCamaraCombate = new Vector3(13f, 6f, -12f);
 
         [MenuItem("TP4/1. Crear contenido y escena de combate", priority = 1)]
         public static void CrearTodo()
@@ -34,6 +35,7 @@ namespace TP4.EditorTools
             // Guardar ANTES de crear la escena: NewScene descarga los assets en memoria
             // y las referencias (y cambios sin guardar) se perderían.
             AssetDatabase.SaveAssets();
+            GenerarUI(false);
             CrearEscena();
             CrearEscenaMenu();
             ConfigurarBuild();
@@ -41,6 +43,18 @@ namespace TP4.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[TP4] Listo: contenido y escena de combate creados. Dale Play en " + Escena);
+        }
+
+        [MenuItem("TP4/7. Actualizar datos y UI (sin tocar escenas)", priority = 7)]
+        public static void ActualizarDatos()
+        {
+            CrearCarpetas();
+            CrearVisuales();
+            CrearDatos();
+            AssetDatabase.SaveAssets();
+            GenerarUI(false);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[TP4] Datos y UI actualizados (las escenas no se tocaron).");
         }
 
         [MenuItem("TP4/2. Regenerar datos (sobrescribe balance)", priority = 2)]
@@ -60,6 +74,107 @@ namespace TP4.EditorTools
                 EditorSceneManager.OpenScene(EscenaMenu);
         }
 
+        // =====================================================================
+        // UI editable (prefabs)
+        // =====================================================================
+        [MenuItem("TP4/5. Generar o actualizar UI editable (no pisa tus cambios)", priority = 5)]
+        public static void GenerarUIEditable()
+        {
+            CrearCarpetas();
+            GenerarUI(false);
+            AssetDatabase.SaveAssets();
+            EditorUtility.DisplayDialog("UI editable",
+                "Listo. Los prefabs están en Assets/_TP4/UI:\n\n" +
+                "• UI_Combate: paneles, ventanas y barras del combate\n" +
+                "• UI_Menu: menú principal\n" +
+                "• UI_Pausa: menú de pausa\n\n" +
+                "Abrilos con doble click y editá lo que quieras. " +
+                "Los textos traducibles se cambian en el componente 'TextoLoc' (Español / Inglés).", "OK");
+        }
+
+        [MenuItem("TP4/6. Regenerar UI editable (pisa tus cambios)", priority = 6)]
+        public static void RegenerarUIEditable()
+        {
+            if (!EditorUtility.DisplayDialog("Regenerar UI",
+                    "Se vuelven a crear los prefabs de UI con el diseño por defecto y se pierden tus cambios. ¿Seguro?",
+                    "Regenerar", "Cancelar")) return;
+            CrearCarpetas();
+            GenerarUI(true);
+            AssetDatabase.SaveAssets();
+        }
+
+        static void GenerarUI(bool pisar)
+        {
+            var vis = AssetDatabase.LoadAssetAtPath<BattleVisuals>($"{Raiz}/BattleVisuals.asset");
+            if (vis == null) { Debug.LogError("[TP4] Falta BattleVisuals.asset: corré primero TP4 > 1."); return; }
+
+            // Los degradés tienen que ser assets para que el prefab los guarde.
+            if (vis.spriteVentana == null)
+                vis.spriteVentana = GuardarSprite($"{Raiz}/UI/SPR_Ventana.png", UIFactory.TexturaGradiente(vis.colorPanelAbajo, vis.colorPanelArriba));
+            if (vis.spriteRelleno == null)
+                vis.spriteRelleno = GuardarSprite($"{Raiz}/UI/SPR_Relleno.png", UIFactory.TexturaGradiente(UIFactory.GradienteBarraAbajo, Color.white));
+            EditorUtility.SetDirty(vis);
+
+            vis.prefabUICombate = GuardarPrefab($"{Raiz}/UI/UI_Combate.prefab", pisar, raiz => BattleUI.GenerarPlantilla(vis, raiz));
+            vis.prefabUIMenu = GuardarPrefab($"{Raiz}/UI/UI_Menu.prefab", pisar, raiz => MainMenu.GenerarPlantilla(vis, raiz));
+            vis.prefabUIPausa = GuardarPrefab($"{Raiz}/UI/UI_Pausa.prefab", pisar, raiz => PauseMenu.GenerarPlantilla(vis, raiz));
+            EditorUtility.SetDirty(vis);
+            AssetDatabase.SaveAssets();
+        }
+
+        static Sprite GuardarSprite(string ruta, Texture2D tex)
+        {
+            File.WriteAllBytes(ruta, tex.EncodeToPNG());
+            AssetDatabase.ImportAsset(ruta);
+            var imp = (TextureImporter)AssetImporter.GetAtPath(ruta);
+            imp.textureType = TextureImporterType.Sprite;
+            imp.spriteImportMode = SpriteImportMode.Single;
+            imp.wrapMode = TextureWrapMode.Clamp;
+            imp.mipmapEnabled = false;
+            imp.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(ruta);
+        }
+
+        /// <summary>
+        /// Si el prefab ya existe (y no se pide pisarlo) se ACTUALIZA: solo se agregan los elementos o
+        /// componentes nuevos que falten; todo lo que editaste queda igual.
+        /// </summary>
+        static GameObject GuardarPrefab(string ruta, bool pisar, Func<GameObject, GameObject> crear)
+        {
+            var existente = AssetDatabase.LoadAssetAtPath<GameObject>(ruta);
+            if (existente != null && !pisar)
+            {
+                var contenido = PrefabUtility.LoadPrefabContents(ruta);
+                crear(contenido);
+                PrefabUtility.SaveAsPrefabAsset(contenido, ruta);
+                PrefabUtility.UnloadPrefabContents(contenido);
+                return AssetDatabase.LoadAssetAtPath<GameObject>(ruta);
+            }
+            var go = crear(null);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, ruta);
+            UnityEngine.Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        [MenuItem("TP4/Probar pelea 1 (Chatarreros)", priority = 20)]
+        public static void ProbarPelea1() => ProbarPelea(0);
+
+        [MenuItem("TP4/Probar pelea 2 (Escuadrón Cromo)", priority = 21)]
+        public static void ProbarPelea2() => ProbarPelea(1);
+
+        [MenuItem("TP4/Probar pelea 3 (Goliat)", priority = 22)]
+        public static void ProbarPelea3() => ProbarPelea(2);
+
+        /// <summary>Abre la escena de combate y le da Play directamente en la pelea elegida.</summary>
+        static void ProbarPelea(int indice)
+        {
+            if (EditorApplication.isPlaying) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            EditorSceneManager.OpenScene(Escena);
+            EditorPrefs.SetInt("tp4.peleaPrueba", indice);
+            EditorApplication.isPlaying = true;
+        }
+
         [MenuItem("TP4/3. Abrir escena de combate", priority = 3)]
         public static void AbrirEscena()
         {
@@ -75,7 +190,7 @@ namespace TP4.EditorTools
             foreach (var c in new[]
                      {
                          Raiz, Datos, Datos + "/Estados", Datos + "/Habilidades", Datos + "/Items", Datos + "/Robots",
-                         Datos + "/Encuentros", Raiz + "/Materials", Raiz + "/Scenes", Raiz + "/Art", Raiz + "/Audio"
+                         Datos + "/Encuentros", Raiz + "/Materials", Raiz + "/Scenes", Raiz + "/Art", Raiz + "/Audio", Raiz + "/UI"
                      })
             {
                 if (AssetDatabase.IsValidFolder(c)) continue;
@@ -277,6 +392,14 @@ namespace TP4.EditorTools
                 s.duracion = 12f; s.intervaloTick = 3f; s.danoPorTickPct = 0.03f;
                 s.modificadores = new List<StatModifierDef> { new StatModifierDef { stat = StatType.Defensa, porcentaje = -0.25f } };
             });
+            // Red eléctrica (módulo único del jefe): atrapa (no puede actuar) y hace daño eléctrico.
+            // Un aliado puede liberarlo con "Liberar", gastando su turno.
+            var redEstado = Asset<StatusData>($"{Datos}/Estados/EST_RedElectrica.asset", s =>
+            {
+                s.nombre = "Red eléctrica"; s.abreviatura = "RED"; s.color = new Color(0.4f, 0.95f, 1f);
+                s.duracion = 9f; s.intervaloTick = 3f; s.danoPorTickPct = 0.06f;
+                s.congelaATB = true; s.liberable = true;
+            });
 
             Color cBlanco = new Color(0.9f, 0.95f, 1f);
             Color cNaranja = new Color(1f, 0.55f, 0.15f);
@@ -332,9 +455,14 @@ namespace TP4.EditorTools
             // ---------- Jefe ----------
             var puno = Hab("HAB_PunoSismico", "Puño sísmico", "", TargetMode.EnemigoUnico, 0, 1f, ActionAnim.Ataque, true, cNaranja, Fis(1.5f));
             var laser = Hab("HAB_LaserBarrido", "Láser de barrido", "", TargetMode.TodosEnemigos, 15, 1.2f, ActionAnim.Disparo, false, new Color(1f, 0.25f, 0.2f), Ene(0.8f));
-            var misiles = Hab("HAB_Misiles", "Lluvia de misiles", "", TargetMode.TodosEnemigos, 20, 1.3f, ActionAnim.Disparo, false, cNaranja, Fis(0.7f), Estado(quemadura, 0.35f));
-            var empMasivo = Hab("HAB_EMPMasivo", "Pulso EMP masivo", "", TargetMode.TodosEnemigos, 25, 1.2f, ActionAnim.Habilidad, false, cAmarillo, Ene(0.5f), Estado(paralisis, 0.4f));
-            var nucleo = Hab("HAB_NucleoSobrecargado", "Núcleo sobrecargado", "", TargetMode.EnemigoUnico, 30, 1.5f, ActionAnim.Disparo, false, new Color(1f, 0.2f, 0.5f), Ene(2.5f));
+            var redElectrica = Hab("HAB_RedElectrica", "Red eléctrica",
+                "Atrapa a un robot en una red electrificada: no puede actuar y recibe daño. Un aliado puede liberarlo.",
+                TargetMode.EnemigoUnico, 25, 1.2f, ActionAnim.Disparo, false, new Color(0.4f, 0.95f, 1f), Ene(0.9f), Estado(redEstado, 1f));
+
+            // ---------- Acción común ----------
+            var liberar = Hab("HAB_Liberar", "Liberar", "Libera a un aliado atrapado en la red eléctrica. Gasta el turno.",
+                TargetMode.AliadoUnico, 0, 1f, ActionAnim.Habilidad, false, new Color(0.5f, 1f, 1f),
+                new ActionEffect { tipo = EffectType.Liberar });
 
             // ---------- Ítems ----------
             var nucleoEnergia = Item("ITEM_NucleoEnergia", "Núcleo de energía", "Recupera 150 de vida a un aliado.", TargetMode.AliadoUnico, cVerde, Cura(0f, 150f));
@@ -370,18 +498,13 @@ namespace TP4.EditorTools
                 new Stats(14, 9, 28, 10, 20), 50, golpe, null, 1.1f, provocar, escudo);
 
             var goliat = Robot("JEFE_Goliat", "Goliat Ω", RobotRole.Jefe, "Campeón invicto del torneo.", new Color(0.35f, 0.32f, 0.3f),
-                new Stats(26, 22, 80, 22, 18), 300, puno, null, 2.2f, laser, misiles);
-            if (goliat.fases == null || goliat.fases.Count == 0)
+                new Stats(26, 22, 80, 22, 18), 300, puno, null, 1.9f, laser);
+            ConfigurarJefe(goliat, puno, laser, redElectrica);
+            // La Red no se puede encadenar: espera 3 acciones del jefe entre usos.
+            if (redElectrica.enfriamiento == 0)
             {
-                goliat.fases = new List<BossPhase>
-                {
-                    new BossPhase { mensaje = "¡Goliat entra en modo combate!", umbralVida = 0.6f, multiplicadorVelocidad = 1.3f,
-                        habilidadesNuevas = new List<AbilityData> { empMasivo }, colorTinte = new Color(1f, 0.55f, 0.2f) },
-                    new BossPhase { mensaje = "¡NÚCLEO AL LÍMITE!", umbralVida = 0.3f, multiplicadorVelocidad = 1.3f,
-                        habilidadesNuevas = new List<AbilityData> { nucleo }, colorTinte = new Color(1f, 0.2f, 0.2f) }
-                };
-                goliat.azarIA = 0.15f;
-                EditorUtility.SetDirty(goliat);
+                redElectrica.enfriamiento = 3;
+                EditorUtility.SetDirty(redElectrica);
             }
 
             // ---------- Traducciones al inglés (solo se completan si están vacías) ----------
@@ -405,9 +528,6 @@ namespace TP4.EditorTools
             EN(reinicio, "Full reboot", "Heals the whole team, removes ailments and restores energy.");
             EN(puno, "Seismic punch", "");
             EN(laser, "Sweeping laser", "");
-            EN(misiles, "Missile rain", "");
-            EN(empMasivo, "Mass EMP pulse", "");
-            EN(nucleo, "Overloaded core", "");
             EN(nucleoEnergia, "Energy core", "Restores 150 HP to an ally.");
             EN(celda, "Energy cell", "Restores 40 energy to an ally.");
             EN(bomba, "Bomb", "70 damage to all enemies and −20% Defense for 15 s.");
@@ -420,14 +540,9 @@ namespace TP4.EditorTools
             ENRobot(nova, "Artillery. Energy modules and status ailments.");
             ENRobot(chispa, "Mechanic. Repairs, speeds up and cleanses the team.");
             ENRobot(goliat, "Undefeated tournament champion.");
-            if (goliat.fases != null && goliat.fases.Count >= 2)
-            {
-                if (string.IsNullOrEmpty(goliat.fases[0].mensajeEN) || goliat.fases[0].mensajeEN == "The boss is enraged!")
-                    goliat.fases[0].mensajeEN = "Goliath enters combat mode!";
-                if (string.IsNullOrEmpty(goliat.fases[1].mensajeEN) || goliat.fases[1].mensajeEN == "The boss is enraged!")
-                    goliat.fases[1].mensajeEN = "CORE AT THE LIMIT!";
-                EditorUtility.SetDirty(goliat);
-            }
+            EN(redElectrica, "Electric net", "Traps a robot in an electrified net: it can't act and takes damage. An ally can free it.");
+            EN(liberar, "Free", "Frees an ally caught in the electric net. Uses up the turn.");
+            ENEstado(redEstado, "Electric net", "NET");
 
             // ---------- Encuentros ----------
             var enc1 = Asset<EncounterData>($"{Datos}/Encuentros/ENC_1_Chatarreros.asset", e =>
@@ -451,7 +566,7 @@ namespace TP4.EditorTools
             ENEncuentro(enc3, "Final", "Goliath Ω");
 
             // ---------- Torneo ----------
-            return Asset<TournamentData>($"{Datos}/Torneo.asset", t =>
+            var torneo = Asset<TournamentData>($"{Datos}/Torneo.asset", t =>
             {
                 t.nombre = "Torneo de Mechas";
                 t.plantel = new List<RobotData> { bastion, vanguardia, nova, chispa };
@@ -466,6 +581,55 @@ namespace TP4.EditorTools
                     new ItemStack { item = pieza, cantidad = 2 },
                 };
             });
+            if (torneo.accionLiberar == null)
+            {
+                torneo.accionLiberar = liberar;
+                EditorUtility.SetDirty(torneo);
+            }
+            return torneo;
+        }
+
+        /// <summary>
+        /// Jefe con 3 ataques: Puño sísmico (cuerpo a cuerpo, uno), Láser de barrido (distancia, todos)
+        /// y Red eléctrica (módulo único). Las fases lo potencian en vez de darle más ataques.
+        /// Se aplica también a un Goliat ya existente de una versión anterior (si todavía no tiene la Red).
+        /// </summary>
+        static void ConfigurarJefe(RobotData jefe, AbilityData puno, AbilityData laser, AbilityData red)
+        {
+            // Versión 3: la Red se desbloquea en la fase 2; 1 acción por turno, 2 en la fase final.
+            bool yaConfigurado = !jefe.habilidades.Contains(red) && jefe.fases != null && jefe.fases.Count >= 2
+                                 && jefe.fases[0].habilidadesNuevas.Contains(red);
+            if (yaConfigurado) return;
+            jefe.ataqueBasico = puno;
+            jefe.habilidades = new List<AbilityData> { laser };
+            jefe.accionesPorTurno = 1;
+            jefe.azarIA = 0.15f;
+            jefe.fases = new List<BossPhase>
+            {
+                // Fase 2 (60%): desbloquea todos sus movimientos (la Red eléctrica).
+                new BossPhase
+                {
+                    mensaje = "¡Goliat entra en modo combate!", mensajeEN = "Goliath enters combat mode!",
+                    umbralVida = 0.6f, multiplicadorVelocidad = 1f, accionesExtra = 0,
+                    habilidadesNuevas = new List<AbilityData> { red },
+                    bonusStats = new List<StatModifierDef>(),
+                    colorTinte = new Color(1f, 0.55f, 0.2f)
+                },
+                // Fase 3 (30%): más daño y 2 acciones por turno.
+                new BossPhase
+                {
+                    mensaje = "¡NÚCLEO AL LÍMITE!", mensajeEN = "CORE AT THE LIMIT!",
+                    umbralVida = 0.3f, multiplicadorVelocidad = 1.25f, accionesExtra = 1,
+                    habilidadesNuevas = new List<AbilityData>(),
+                    bonusStats = new List<StatModifierDef>
+                    {
+                        new StatModifierDef { stat = StatType.Fuerza, porcentaje = 0.25f },
+                        new StatModifierDef { stat = StatType.Magia, porcentaje = 0.25f }
+                    },
+                    colorTinte = new Color(1f, 0.2f, 0.2f)
+                }
+            };
+            EditorUtility.SetDirty(jefe);
         }
 
         // =====================================================================
@@ -495,7 +659,8 @@ namespace TP4.EditorTools
             var sjefe = Spawn("Jefe", spawns, new Vector3(-6.5f, 0, 0), Vector3.right);
 
             // Cámara
-            var battleCam = CrearCamara(new Vector3(10.5f, 6.2f, -8.5f), new Vector3(-0.5f, -0.6f, 0.4f), 42f);
+            // Cámara alta y lejana, estilo FF7: se ve todo el campo, incluido el jefe gigante.
+            var battleCam = CrearCamara(PosCamaraCombate, new Vector3(-0.5f, 0f, 0.3f), 42f);
             CrearPostProceso();
 
             // BattleManager
@@ -591,6 +756,9 @@ namespace TP4.EditorTools
             for (int i = 0; i < 10; i++)
             {
                 float ang = i * Mathf.PI * 2f / 10f;
+                // No poner pilares entre la cámara de combate y el centro.
+                float angCamara = Mathf.Atan2(PosCamaraCombate.z, PosCamaraCombate.x);
+                if (Mathf.Abs(Mathf.DeltaAngle(ang * Mathf.Rad2Deg, angCamara * Mathf.Rad2Deg)) < 50f) continue;
                 var pos = new Vector3(Mathf.Cos(ang) * 18f, 3f, Mathf.Sin(ang) * 18f);
                 var pilar = Primitiva(PrimitiveType.Cube, "Pilar " + i, arena.transform, pos, new Vector3(1.2f, 6f, 1.2f), metal);
                 pilar.transform.LookAt(new Vector3(0, 3f, 0));

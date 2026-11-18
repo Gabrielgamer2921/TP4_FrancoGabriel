@@ -18,7 +18,7 @@ MonoBehaviour:
   descripcionEN: Undefeated tournament champion.
   retrato: {fileID: 0}
   modelo: {fileID: 0}
-  escala: 2.2
+  escala: 1.9
   colorPrincipal: {r: 0.35, g: 0.32, b: 0.3, a: 1}
   animatorController: {fileID: 0}
   stats:
@@ -31,21 +31,28 @@ MonoBehaviour:
   ataqueBasico: {fileID: 11400000, guid: e5ee759e2de2a6e409807c29cf0bd930, type: 2}
   habilidades:
   - {fileID: 11400000, guid: e9279b3c8219b6845b0124a8dcd58de8, type: 2}
-  - {fileID: 11400000, guid: d510b249ad048f44f8d8adbe026173fa, type: 2}
   overdrive: {fileID: 0}
+  accionesPorTurno: 1
   azarIA: 0.15
   fases:
   - mensaje: "\xA1Goliat entra en modo combate!"
     mensajeEN: Goliath enters combat mode!
     umbralVida: 0.6
-    multiplicadorVelocidad: 1.3
+    multiplicadorVelocidad: 1
+    accionesExtra: 0
+    bonusStats: []
     habilidadesNuevas:
-    - {fileID: 11400000, guid: 8ea999c3e0c7ce84b9b37bd649d4996d, type: 2}
+    - {fileID: 11400000, guid: 496bef6e48df9d548b26fb20ad1714d6, type: 2}
     colorTinte: {r: 1, g: 0.55, b: 0.2, a: 1}
   - mensaje: "\xA1N\xDACLEO AL L\xCDMITE!"
     mensajeEN: CORE AT THE LIMIT!
     umbralVida: 0.3
-    multiplicadorVelocidad: 1.3
-    habilidadesNuevas:
-    - {fileID: 11400000, guid: 593f48de69142e646bfd0f90bf68e983, type: 2}
+    multiplicadorVelocidad: 1.25
+    accionesExtra: 1
+    bonusStats:
+    - stat: 0
+      porcentaje: 0.25
+    - stat: 3
+      porcentaje: 0.25
+    habilidadesNuevas: []
     colorTinte: {r: 1, g: 0.2, b: 0.2, a: 1}

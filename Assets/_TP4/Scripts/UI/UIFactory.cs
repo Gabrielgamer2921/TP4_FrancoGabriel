@@ -56,13 +56,41 @@ namespace TP4
 
         static Sprite gradienteVentana;
 
-        static Sprite CrearGradiente(Color abajo, Color arriba)
+        /// <summary>Textura vertical de degradé (la usa también el editor para guardarla como asset).</summary>
+        public static Texture2D TexturaGradiente(Color abajo, Color arriba)
         {
             var tex = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             for (int y = 0; y < 64; y++)
                 tex.SetPixel(0, y, Color.Lerp(abajo, arriba, y / 63f));
             tex.Apply();
+            return tex;
+        }
+
+        public static Color GradienteBarraAbajo => new Color(0.55f, 0.55f, 0.55f);
+
+        static Sprite CrearGradiente(Color abajo, Color arriba)
+        {
+            var tex = TexturaGradiente(abajo, arriba);
             return Sprite.Create(tex, new UnityEngine.Rect(0, 0, 1, 64), new Vector2(0.5f, 0.5f));
+        }
+
+        /// <summary>Agrega Canvas + CanvasScaler + GraphicRaycaster si el objeto no los tiene.</summary>
+        public static RectTransform AsegurarCanvas(GameObject go, int orden)
+        {
+            var canvas = go.GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = go.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = orden;
+                var scaler = go.AddComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.matchWidthOrHeight = 0.5f;
+                go.AddComponent<GraphicRaycaster>();
+            }
+            go.layer = 5;
+            return (RectTransform)go.transform;
         }
 
         /// <summary>Ventana azul con degradé y borde claro.</summary>
@@ -72,7 +100,8 @@ namespace TP4
             Color arriba = vis != null ? vis.colorPanelArriba : new Color(0.16f, 0.24f, 0.72f, 0.97f);
             Color abajo = vis != null ? vis.colorPanelAbajo : new Color(0.03f, 0.05f, 0.28f, 0.97f);
             Color borde = vis != null ? vis.colorBorde : new Color(0.85f, 0.88f, 0.95f);
-            if (gradienteVentana == null) gradienteVentana = CrearGradiente(abajo, arriba);
+            Sprite sprite = vis != null && vis.spriteVentana != null ? vis.spriteVentana : null;
+            if (sprite == null && gradienteVentana == null) gradienteVentana = CrearGradiente(abajo, arriba);
 
             // Borde: imagen de fondo; el interior va 3px adentro.
             var bordeImg = rt.gameObject.AddComponent<Image>();
@@ -81,7 +110,7 @@ namespace TP4
 
             var interior = Estirar(Rect("Interior", rt), 3, 3, 3, 3);
             var img = interior.gameObject.AddComponent<Image>();
-            img.sprite = gradienteVentana;
+            img.sprite = sprite != null ? sprite : gradienteVentana;
             img.color = Color.white;
             img.raycastTarget = false;
             return bordeImg;
@@ -118,7 +147,7 @@ namespace TP4
             }
         }
 
-        public static Barra CrearBarra(Transform padre, Color color)
+        public static Barra CrearBarra(Transform padre, Color color, BattleVisuals vis = null)
         {
             var raiz = Rect("Barra", padre);
             var fondo = raiz.gameObject.AddComponent<Image>();
@@ -135,7 +164,7 @@ namespace TP4
             relleno.offsetMin = Vector2.zero;
             relleno.offsetMax = Vector2.zero;
             var img = relleno.gameObject.AddComponent<Image>();
-            img.sprite = Gradiente();
+            img.sprite = vis != null && vis.spriteRelleno != null ? vis.spriteRelleno : Gradiente();
             img.color = color;
             img.raycastTarget = false;
             return new Barra { raiz = raiz, relleno = relleno, imagenRelleno = img };

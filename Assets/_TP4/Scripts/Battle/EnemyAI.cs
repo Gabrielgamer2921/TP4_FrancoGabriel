@@ -14,7 +14,15 @@ namespace TP4
         {
             var acciones = new List<AbilityData>();
             if (yo.Data.ataqueBasico != null) acciones.Add(yo.Data.ataqueBasico);
-            foreach (var h in yo.Habilidades) if (yo.PuedeUsar(h)) acciones.Add(h);
+            var rivalesVivos = bm.Vivos(OtroEquipo(yo.Team));
+            foreach (var h in yo.Habilidades)
+            {
+                if (!yo.PuedeUsar(h)) continue;
+                // Trampas (Red eléctrica): nunca contra el último robot en pie (lo dejaría sin poder jugar)
+                // ni si ya hay alguien atrapado.
+                if (EsTrampa(h) && (rivalesVivos.Count <= 1 || rivalesVivos.Exists(r => r.TieneEstadoLiberable))) continue;
+                acciones.Add(h);
+            }
             if (yo.OverdriveListo) acciones.Add(yo.Data.overdrive);
 
             ActionRequest mejor = null;
@@ -43,6 +51,13 @@ namespace TP4
                     mejor = new ActionRequest(yo, yo.Data.ataqueBasico, new List<BattleUnit> { rivales[Random.Range(0, rivales.Count)] });
             }
             return mejor;
+        }
+
+        static bool EsTrampa(ActionData a)
+        {
+            foreach (var e in a.efectos)
+                if (e.tipo == EffectType.AplicarEstado && e.estado != null && e.estado.liberable) return true;
+            return false;
         }
 
         static Team OtroEquipo(Team t) => t == Team.Jugador ? Team.Enemigo : Team.Jugador;
@@ -90,15 +105,20 @@ namespace TP4
                         case EffectType.DanoFijo:
                         {
                             float est = EstimarDano(yo, t, e);
-                            // Preferir el daño relativo a la vida (rematar al débil).
-                            puntaje += Mathf.Min(est, t.Vida) / t.VidaMax * 100f;
+                            // Preferir el daño relativo a la vida (rematar al débil),
+                            // más una base de "agresividad" para que todos ataquen seguido.
+                            puntaje += Mathf.Min(est, t.Vida) / t.VidaMax * 100f + 12f;
                             if (est >= t.Vida) puntaje += 40f; // bonus por eliminar
                             break;
                         }
                         case EffectType.Curar:
                         {
-                            float falta = 1f - t.VidaPct;
-                            puntaje += falta > 0.4f ? falta * 130f : -15f;
+                            // Solo vale la pena curar a quien está por debajo de la mitad,
+                            // y se valora la vida que realmente recupera (no la que se desperdicia).
+                            if (t.VidaPct >= 0.5f) { puntaje -= 20f; break; }
+                            float cura = Formulas.Curacion(yo.GetStat(StatType.Magia), e.potencia, e.valorFijo);
+                            float util = Mathf.Min(cura, t.VidaMax - t.Vida) / t.VidaMax * 100f;
+                            puntaje += util * (t.VidaPct < 0.25f ? 1.6f : 1f);
                             break;
                         }
                         case EffectType.RestaurarEnergia:
@@ -120,6 +140,9 @@ namespace TP4
                             if (e.potencia > 0f) puntaje += (t != yo && t.State == UnitState.Cargando && t.ATB < 0.6f) ? 22f : -5f;
                             else puntaje += 18f;
                             break;
+                        case EffectType.Liberar:
+                            puntaje += t.TieneEstadoLiberable ? 45f : -50f;
+                            break;
                         case EffectType.Provocar:
                         {
                             if (yo.EstaProvocando) { puntaje -= 20f; break; }
@@ -138,6 +161,11 @@ namespace TP4
                 puntaje -= hab.costoEnergia * 0.15f;
                 if (hab.esOverdrive) puntaje += 35f;
             }
+            // Variedad: las acciones de soporte pierden valor si viene encadenando varias seguidas
+            // (el médico también ataca), y repetir exactamente la misma acción se penaliza.
+            if (!accion.HaceDano && puntaje > 0f) puntaje *= Mathf.Pow(0.6f, yo.RachaSoporte);
+            if (accion == yo.UltimaAccion && accion != yo.Data.ataqueBasico && puntaje > 0f) puntaje *= 0.7f;
+
             // Acciones lentas valen un poco menos.
             puntaje /= Mathf.Lerp(1f, accion.recuperacion, 0.35f);
             return puntaje;

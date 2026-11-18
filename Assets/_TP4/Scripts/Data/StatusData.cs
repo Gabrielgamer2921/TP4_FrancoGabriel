@@ -27,6 +27,9 @@ namespace TP4
         [Tooltip("Si es true, la barra ATB no avanza mientras dure (parálisis).")]
         public bool congelaATB = false;
 
+        [Tooltip("Si es true, un aliado puede liberarlo con el comando 'Liberar' (gasta su turno). Ej: Red eléctrica.")]
+        public bool liberable = false;
+
         [Header("Modificadores mientras dure")]
         public List<StatModifierDef> modificadores = new List<StatModifierDef>();
 

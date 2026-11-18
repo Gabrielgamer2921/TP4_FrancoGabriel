@@ -71,6 +71,13 @@ namespace TP4
             NuevoTorneo(torneo, EquipoPorDefecto(torneo), Dificultad.Normal);
         }
 
+        /// <summary>Solo para pruebas: empezar directamente en una pelea.</summary>
+        public static void SaltarAPelea(int indice)
+        {
+            if (Torneo == null) return;
+            PeleaActual = Mathf.Clamp(indice, 0, Torneo.peleas.Count - 1);
+        }
+
         /// <summary>Pasa a la siguiente pelea. Devuelve false si el torneo terminó.</summary>
         public static bool AvanzarPelea()
         {
