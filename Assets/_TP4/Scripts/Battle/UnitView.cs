@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Parte visual de un robot: modelo (o cápsula placeholder), animaciones, flash al recibir daño,
-    /// proyectiles y efectos de estado.
-    /// Triggers de Animator que usa (todos opcionales): Attack, Shoot, Skill, Item, Hit, Die, Victory.
-    /// </summary>
     public class UnitView : MonoBehaviour
     {
         BattleUnit unit;
@@ -28,6 +23,7 @@ namespace TP4
 
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
+        static readonly int MainTexId = Shader.PropertyToID("_BaseMap");
 
         public void Construir(BattleUnit unit, BattleVisuals vis)
         {
@@ -51,10 +47,6 @@ namespace TP4
             unit.PhaseTriggered += (u, fase) => { tinte = fase.colorTinte; AplicarTinte(); StartCoroutine(Pulso(1.15f)); };
         }
 
-        /// <summary>
-        /// Instancia el modelo de un robot (o el placeholder de cubos si no tiene modelo).
-        /// Lo usan el combate, el menú principal y la selección de equipo.
-        /// </summary>
         public static GameObject CrearModelo(RobotData data, Transform padre, BattleVisuals vis, out Animator animator)
         {
             GameObject go;
@@ -63,11 +55,14 @@ namespace TP4
             {
                 go = Instantiate(data.modelo, padre);
                 go.transform.localPosition = Vector3.zero;
-                go.transform.localRotation = Quaternion.identity;
-                go.transform.localScale = Vector3.one * data.escala;
+                go.transform.localRotation = Quaternion.Euler(0f, data.rotacionModelo, 0f);
+                go.transform.localScale = Vector3.one;
                 animator = go.GetComponentInChildren<Animator>();
-                if (animator != null && data.animatorController != null)
-                    animator.runtimeAnimatorController = data.animatorController;
+                if (animator == null) animator = go.AddComponent<Animator>();
+                if (data.animatorController != null) animator.runtimeAnimatorController = data.animatorController;
+                animator.applyRootMotion = false;
+                NormalizarAltura(go, AlturaModelo * data.escala);
+                Tenir(go, data, vis);
             }
             else
             {
@@ -75,6 +70,33 @@ namespace TP4
             }
             foreach (var c in go.GetComponentsInChildren<Collider>()) Destroy(c);
             return go;
+        }
+
+        const float AlturaModelo = 2.3f;
+
+        static void NormalizarAltura(GameObject go, float alto)
+        {
+            var rs = go.GetComponentsInChildren<Renderer>();
+            if (rs.Length == 0) return;
+            var b = rs[0].bounds;
+            foreach (var r in rs) b.Encapsulate(r.bounds);
+            if (b.size.y > 0.01f) go.transform.localScale *= alto / b.size.y;
+        }
+
+        static void Tenir(GameObject go, RobotData data, BattleVisuals vis)
+        {
+            var mat = vis != null && vis.materialPlaceholder != null ? new Material(vis.materialPlaceholder) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (data.textura != null) mat.SetTexture(MainTexId, data.textura);
+            var c = Color.Lerp(Color.white, data.colorPrincipal, 0.55f);
+            c.a = 1f;
+            mat.color = c;
+            if (mat.HasProperty(BaseColorId)) mat.SetColor(BaseColorId, c);
+            foreach (var r in go.GetComponentsInChildren<Renderer>())
+            {
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+                r.sharedMaterials = mats;
+            }
         }
 
         static GameObject CrearPlaceholder(RobotData data, Transform padre, BattleVisuals vis)
@@ -87,7 +109,6 @@ namespace TP4
             Material oscuro = CrearMaterial(vis != null ? vis.materialPlaceholder : null, data.colorPrincipal * 0.45f, false);
             Material visor = CrearMaterial(vis != null ? vis.materialEmisivo : null, new Color(0.3f, 1f, 1f), true);
 
-            // Un "mecha" simple: torso, piernas, hombros y visor.
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(0, 1.35f, 0), new Vector3(0.9f, 0.8f, 0.7f), mat);
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(-0.25f, 0.5f, 0), new Vector3(0.28f, 1f, 0.35f), oscuro);
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(0.25f, 0.5f, 0), new Vector3(0.28f, 1f, 0.35f), oscuro);
@@ -95,7 +116,6 @@ namespace TP4
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(0.62f, 1.55f, 0), new Vector3(0.35f, 0.35f, 0.5f), oscuro);
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(0, 1.95f, 0.05f), new Vector3(0.5f, 0.35f, 0.45f), mat);
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(0, 1.97f, 0.28f), new Vector3(0.4f, 0.1f, 0.05f), visor);
-            // Cañón en el brazo derecho
             Pieza(raiz.transform, PrimitiveType.Cube, new Vector3(0.62f, 1.25f, 0.35f), new Vector3(0.16f, 0.16f, 0.7f), oscuro);
             return raiz;
         }
@@ -112,7 +132,6 @@ namespace TP4
 
         static readonly Dictionary<string, Material> cacheMateriales = new Dictionary<string, Material>();
 
-        /// <summary>Crea (o reutiliza) un material de color a partir de un material base.</summary>
         public static Material CrearMaterial(Material baseMat, Color color, bool emisivo)
         {
             string clave = (baseMat != null ? baseMat.GetHashCode().ToString() : "null") + "|" + emisivo + "|" + ColorUtility.ToHtmlStringRGBA(color);
@@ -144,7 +163,6 @@ namespace TP4
             Altura = Mathf.Max(0.5f, b.max.y - transform.position.y);
         }
 
-        // ---------- Animaciones ----------
         public bool Trigger(string nombre)
         {
             if (animator == null || !parametros.Contains(nombre)) return false;
@@ -163,7 +181,6 @@ namespace TP4
             }
         }
 
-        /// <summary>Todo lo que pasa antes del impacto: avanzar, animar, disparar.</summary>
         public IEnumerator Preparar(ActionData accion, List<BattleUnit> objetivos)
         {
             BattleUnit primero = objetivos.Count > 0 ? objetivos[0] : null;
@@ -179,7 +196,8 @@ namespace TP4
                 yield return Mover(destino, 0.22f);
             }
 
-            bool animo = Trigger(TriggerDe(accion.animacion)) || Trigger("Attack");
+            bool esOverdrive = accion is AbilityData od && od.esOverdrive;
+            bool animo = esOverdrive ? Trigger("Overdrive") || Trigger("Attack") : Trigger(TriggerDe(accion.animacion)) || Trigger("Attack");
             if (!animo) StartCoroutine(Pulso(1.08f));
 
             if (accion.vfxLanzamiento != null)
@@ -249,7 +267,6 @@ namespace TP4
             Destroy(p);
         }
 
-        /// <summary>Destello de impacto por defecto cuando la acción no tiene VFX propio.</summary>
         public void Impacto(ActionData accion)
         {
             if (accion != null && accion.vfxImpacto != null)
@@ -276,7 +293,6 @@ namespace TP4
             Destroy(go);
         }
 
-        // ---------- Reacciones ----------
         IEnumerator Golpeado()
         {
             if (!unit.IsAlive) yield break;
@@ -296,7 +312,6 @@ namespace TP4
         {
             Sfx.Play(SfxId.Muerte, 0.8f);
             if (Trigger("Die")) yield break;
-            // Sin animación: se cae y se oscurece.
             SetColorFlash(new Color(0.15f, 0.15f, 0.15f));
             Quaternion desde = modelo.localRotation;
             Quaternion hasta = desde * Quaternion.Euler(-80f, 0, 0);
@@ -366,8 +381,6 @@ namespace TP4
             }
         }
 
-        // ---------- Estados ----------
-        /// <summary>Jaula de barras eléctricas alrededor del robot (estados liberables).</summary>
         GameObject CrearJaula(StatusData estado)
         {
             var jaula = new GameObject("Jaula_" + estado.nombre);
@@ -380,12 +393,10 @@ namespace TP4
             {
                 float a = i * Mathf.PI * 2f / lados;
                 puntos[i] = new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
-                // Barras verticales
                 var barra = Pieza(jaula.transform, PrimitiveType.Cube, puntos[i] + Vector3.up * Altura * 0.5f,
                     new Vector3(0.05f, Altura, 0.05f), mat);
                 Destroy(barra.GetComponent<Collider>());
             }
-            // Anillos horizontales
             foreach (float h in new[] { 0.15f, 0.55f, 0.95f })
             {
                 for (int i = 0; i < lados; i++)
@@ -412,7 +423,6 @@ namespace TP4
             }
             if (estado.liberable) return CrearJaula(estado);
 
-            // Anillo de color a los pies.
             var anillo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(anillo.GetComponent<Collider>());
             anillo.name = "Estado_" + estado.nombre;
@@ -426,7 +436,6 @@ namespace TP4
         }
     }
 
-    /// <summary>Chisporroteo de la jaula de la Red eléctrica: gira y "parpadea" barras al azar.</summary>
     public class Chisporroteo : MonoBehaviour
     {
         float t;
@@ -440,7 +449,6 @@ namespace TP4
         }
     }
 
-    /// <summary>Escala que late suavemente (para los anillos de estado).</summary>
     public class Latido : MonoBehaviour
     {
         Vector3 s0;

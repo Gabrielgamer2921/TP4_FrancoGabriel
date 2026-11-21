@@ -15,11 +15,14 @@ MonoBehaviour:
   nombre: Remache
   rol: 0
   descripcion: 
+  descripcionEN: 
   retrato: {fileID: 0}
-  modelo: {fileID: 0}
+  modelo: {fileID: 919132149155446097, guid: 612b595ae234ad24abf86be2479654d7, type: 3}
   escala: 1.05
   colorPrincipal: {r: 0.45, g: 0.45, b: 0.5, a: 1}
-  animatorController: {fileID: 0}
+  animatorController: {fileID: 9100000, guid: bfc1b6596295f0a4ca28f8b16451dddb, type: 2}
+  textura: {fileID: 2800000, guid: 56659f7c2e68add48b0fecfe338ae81d, type: 3}
+  rotacionModelo: 0
   stats:
     fuerza: 12
     agilidad: 8
@@ -31,5 +34,6 @@ MonoBehaviour:
   habilidades:
   - {fileID: 11400000, guid: c2d0d0af710a6f64dbe24b1c7c20ea8d, type: 2}
   overdrive: {fileID: 0}
+  accionesPorTurno: 1
   azarIA: 0.25
   fases: []

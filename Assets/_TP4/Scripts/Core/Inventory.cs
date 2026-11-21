@@ -2,7 +2,6 @@ using System.Collections.Generic;
 
 namespace TP4
 {
-    /// <summary>Inventario compartido del equipo del jugador.</summary>
     public class Inventory
     {
         readonly List<ItemData> orden = new List<ItemData>();

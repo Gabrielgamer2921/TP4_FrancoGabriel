@@ -15,11 +15,14 @@ MonoBehaviour:
   nombre: Voltio
   rol: 2
   descripcion: 
+  descripcionEN: 
   retrato: {fileID: 0}
-  modelo: {fileID: 0}
+  modelo: {fileID: 919132149155446097, guid: 85357fdde2b5563449b9af211b90041d, type: 3}
   escala: 0.9
   colorPrincipal: {r: 0.4, g: 0.6, b: 0.4, a: 1}
-  animatorController: {fileID: 0}
+  animatorController: {fileID: 9100000, guid: 806181afa2cd55642b90ec6bbc277430, type: 2}
+  textura: {fileID: 2800000, guid: fc07f3d7d1370a949ba80d5bbfdd1307, type: 3}
+  rotacionModelo: 0
   stats:
     fuerza: 6
     agilidad: 12
@@ -32,5 +35,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 97492178e43362042be49859724f5ed8, type: 2}
   - {fileID: 11400000, guid: 455cd9b1e090b094daa0a868f539b6e3, type: 2}
   overdrive: {fileID: 0}
+  accionesPorTurno: 1
   azarIA: 0.25
   fases: []

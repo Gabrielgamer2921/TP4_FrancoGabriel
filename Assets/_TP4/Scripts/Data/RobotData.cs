@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Definición de un robot. La usan tanto los aliados como los enemigos y el jefe.
-    /// </summary>
     [CreateAssetMenu(menuName = "TP4/Robot", fileName = "ROB_Nuevo")]
     public class RobotData : ScriptableObject
     {
@@ -25,6 +22,8 @@ namespace TP4
         public Color colorPrincipal = Color.gray;
         [Tooltip("Override del Animator Controller (opcional). Si es null se usa el del modelo.")]
         public RuntimeAnimatorController animatorController;
+        public Texture2D textura;
+        public float rotacionModelo = 0f;
 
         [Header("Estadísticas")]
         public Stats stats = new Stats(15, 15, 20, 15, 10);

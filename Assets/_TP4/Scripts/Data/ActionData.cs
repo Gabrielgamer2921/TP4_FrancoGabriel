@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>Base común de habilidades e ítems: a quién apunta, qué efectos tiene y cómo se ve.</summary>
     public abstract class ActionData : ScriptableObject
     {
         [Header("General")]

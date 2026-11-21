@@ -26,7 +26,6 @@ namespace TP4
         Jefe
     }
 
-    /// <summary>A quién puede apuntar una acción, relativo a quien la usa.</summary>
     public enum TargetMode
     {
         [InspectorName("Enemigo único")] EnemigoUnico,
@@ -51,10 +50,6 @@ namespace TP4
         [InspectorName("Liberar (quita estados liberables)")] Liberar
     }
 
-    /// <summary>
-    /// Cómo corre el tiempo de la ATB (inspirado en las opciones de FF4–FF9).
-    /// En todos los modos la barra avanza según la Agilidad; cambia cuándo se detiene.
-    /// </summary>
     public enum ModoATB
     {
         [InspectorName("Activo (el tiempo nunca se detiene)")] Activo,
@@ -62,7 +57,6 @@ namespace TP4
         [InspectorName("Clásico (se detiene mientras tengas un robot listo)")] Clasico
     }
 
-    /// <summary>Dificultad: escala las stats de los rivales.</summary>
     public enum Dificultad
     {
         Facil,
@@ -71,7 +65,6 @@ namespace TP4
         Mecha
     }
 
-    /// <summary>Animación genérica que dispara una acción (triggers del Animator).</summary>
     public enum ActionAnim
     {
         Ataque,

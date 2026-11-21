@@ -3,13 +3,6 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>
-    /// Texto traducible.
-    /// • Texto fijo: el ESPAÑOL es lo que escribas en el componente Text (como cualquier texto);
-    ///   acá solo completás el INGLÉS.
-    /// • Plantilla (ej: "Ronda {0}/{1}"): el juego completa los {0}, {1}... Editá las plantillas
-    ///   en los campos Español / Inglés de este componente.
-    /// </summary>
     [RequireComponent(typeof(Text))]
     public class TextoLoc : MonoBehaviour
     {
@@ -43,7 +36,6 @@ namespace TP4
             Ajustes.Cambio -= Refrescar;
         }
 
-        /// <summary>Plantilla en el idioma actual (para textos con {0}, {1}...).</summary>
         public string Plantilla => Ajustes.Ingles && !string.IsNullOrEmpty(ingles) ? ingles : espanol;
 
         public void Refrescar()
@@ -55,7 +47,6 @@ namespace TP4
             texto.text = Ajustes.Ingles && !string.IsNullOrEmpty(ingles) ? ingles : espanolOriginal;
         }
 
-        /// <summary>Escribe la plantilla completada con los valores.</summary>
         public void Formatear(params object[] valores)
         {
             if (texto == null) texto = GetComponent<Text>();
@@ -65,7 +56,6 @@ namespace TP4
         }
 
 #if UNITY_EDITOR
-        // En el editor, el campo "Español" sigue al componente Text (que es el que se edita).
         void OnValidate()
         {
             if (Application.isPlaying || esPlantilla) return;

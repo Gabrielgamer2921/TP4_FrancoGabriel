@@ -3,7 +3,6 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>Helpers para construir la UI por código (estilo ventanas azules de FF7).</summary>
     public static class UIFactory
     {
         static Sprite gradiente;
@@ -22,13 +21,12 @@ namespace TP4
         public static RectTransform Rect(string nombre, Transform padre)
         {
             var go = new GameObject(nombre, typeof(RectTransform));
-            go.layer = 5; // UI
+            go.layer = 5;
             var rt = (RectTransform)go.transform;
             rt.SetParent(padre, false);
             return rt;
         }
 
-        /// <summary>Posiciona un rect anclado a una esquina. pos = esquina inferior izquierda relativa al ancla.</summary>
         public static RectTransform Ubicar(RectTransform rt, Vector2 ancla, Vector2 pivot, Vector2 pos, Vector2 tamano)
         {
             rt.anchorMin = rt.anchorMax = ancla;
@@ -56,7 +54,6 @@ namespace TP4
 
         static Sprite gradienteVentana;
 
-        /// <summary>Textura vertical de degradé (la usa también el editor para guardarla como asset).</summary>
         public static Texture2D TexturaGradiente(Color abajo, Color arriba)
         {
             var tex = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
@@ -74,7 +71,6 @@ namespace TP4
             return Sprite.Create(tex, new UnityEngine.Rect(0, 0, 1, 64), new Vector2(0.5f, 0.5f));
         }
 
-        /// <summary>Agrega Canvas + CanvasScaler + GraphicRaycaster si el objeto no los tiene.</summary>
         public static RectTransform AsegurarCanvas(GameObject go, int orden)
         {
             var canvas = go.GetComponent<Canvas>();
@@ -93,7 +89,6 @@ namespace TP4
             return (RectTransform)go.transform;
         }
 
-        /// <summary>Ventana azul con degradé y borde claro.</summary>
         public static Image Ventana(string nombre, Transform padre, BattleVisuals vis)
         {
             var rt = Rect(nombre, padre);
@@ -103,7 +98,6 @@ namespace TP4
             Sprite sprite = vis != null && vis.spriteVentana != null ? vis.spriteVentana : null;
             if (sprite == null && gradienteVentana == null) gradienteVentana = CrearGradiente(abajo, arriba);
 
-            // Borde: imagen de fondo; el interior va 3px adentro.
             var bordeImg = rt.gameObject.AddComponent<Image>();
             bordeImg.color = borde;
             bordeImg.raycastTarget = false;

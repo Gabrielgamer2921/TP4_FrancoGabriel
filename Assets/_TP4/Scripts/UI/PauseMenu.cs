@@ -6,10 +6,6 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>
-    /// Menú de pausa del combate: Continuar / Opciones / Abandonar torneo.
-    /// Se abre con Esc o P (teclado) o Start (joystick). Detiene el tiempo (Time.timeScale = 0).
-    /// </summary>
     public class PauseMenu : MonoBehaviour
     {
         public static bool Abierta { get; private set; }
@@ -34,7 +30,6 @@ namespace TP4
 
         public static PauseMenu Crear(BattleManager bm, BattleVisuals vis)
         {
-            // Si existe el prefab editable (TP4 > Generar UI editable) se usa ese; si no, se arma por código.
             GameObject go = vis != null && vis.prefabUIPausa != null ? Instantiate(vis.prefabUIPausa) : new GameObject("PauseMenu");
             go.name = "PauseMenu";
             var raiz = UIFactory.AsegurarCanvas(go, 30);
@@ -47,7 +42,6 @@ namespace TP4
             return p;
         }
 
-        /// <summary>Editor: arma el menú de pausa (visible) para guardarlo como prefab editable.</summary>
         public static GameObject GenerarPlantilla(BattleVisuals vis, GameObject existente = null)
         {
             var go = existente != null ? existente : new GameObject("UI_Pausa");
@@ -115,7 +109,6 @@ namespace TP4
             if (!Abierta)
             {
                 bool puede = bm != null && (bm.Fase == BattlePhase.Intro || bm.Fase == BattlePhase.EnCurso);
-                // Esc solo pausa si no se estaba usando para volver de un submenú.
                 bool enSubmenu = estabaEnSubmenu || (bm != null && bm.UI != null && bm.UI.EnSubmenu);
                 if (puede && TeclaPausa(!enSubmenu)) Abrir();
             }
@@ -150,7 +143,6 @@ namespace TP4
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
 
-        /// <summary>Cancelar (Esc / B) se ignora en el mismo frame en que se abrió el menú.</summary>
         System.Action Cancelar(System.Action accion) => () =>
         {
             if (frameCambio == Time.frameCount) return;
@@ -200,7 +192,6 @@ namespace TP4
 
         void AlCambiarAjustes()
         {
-            // Si cambió el idioma, se rearma la pantalla actual con los textos nuevos.
             if (!Abierta || Ajustes.Idioma == idiomaMostrado) return;
             if (pantalla == Pantalla.Opciones) MostrarOpciones(lista.IndiceActual);
         }

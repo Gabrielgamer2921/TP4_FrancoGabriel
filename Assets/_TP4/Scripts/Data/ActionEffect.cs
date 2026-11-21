@@ -3,11 +3,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Un efecto dentro de una acción (habilidad o ítem). Una acción puede tener varios
-    /// (ej: Plasma = Daño de energía + Aplicar estado Quemadura).
-    /// Cada tipo usa solo algunos campos; los tooltips indican cuáles.
-    /// </summary>
     [Serializable]
     public class ActionEffect
     {

@@ -9,10 +9,6 @@ namespace TP4
         Golpe, Disparo, Curar, Estado, Muerte, Victoria, Derrota, Overdrive
     }
 
-    /// <summary>
-    /// Reproductor de efectos de sonido. Si un clip no está asignado en <see cref="BattleVisuals"/>,
-    /// genera un sonido procedural para que el feedback sonoro exista desde el día 1.
-    /// </summary>
     public class Sfx : MonoBehaviour
     {
         public static Sfx Instance { get; private set; }
@@ -103,7 +99,6 @@ namespace TP4
             return clip;
         }
 
-        // ---------- Sonidos procedurales ----------
         const int SampleRate = 44100;
 
         static AudioClip Generar(SfxId id)
@@ -164,7 +159,6 @@ namespace TP4
             {
                 float t = (float)i / n;
                 float env = Mathf.Pow(1f - t, 2.5f);
-                // ruido filtrado + un golpe grave
                 prev = Mathf.Lerp(prev, Random.Range(-1f, 1f), 0.35f);
                 fase += 2f * Mathf.PI * Mathf.Lerp(graves, graves * 0.4f, t) / SampleRate;
                 data[i] = (prev * 0.6f + Mathf.Sin(fase) * 0.6f) * env * vol;

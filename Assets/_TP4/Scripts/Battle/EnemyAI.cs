@@ -3,11 +3,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// IA de los enemigos. El CUÁNDO lo decide la ATB; acá se decide QUÉ hacer y A QUIÉN.
-    /// Se puntúa cada combinación (acción, objetivo) y se elige la de mayor puntaje,
-    /// con un poco de azar para no ser predecible.
-    /// </summary>
     public static class EnemyAI
     {
         public static ActionRequest Decidir(BattleUnit yo, BattleManager bm)
@@ -18,8 +13,6 @@ namespace TP4
             foreach (var h in yo.Habilidades)
             {
                 if (!yo.PuedeUsar(h)) continue;
-                // Trampas (Red eléctrica): nunca contra el último robot en pie (lo dejaría sin poder jugar)
-                // ni si ya hay alguien atrapado.
                 if (EsTrampa(h) && (rivalesVivos.Count <= 1 || rivalesVivos.Exists(r => r.TieneEstadoLiberable))) continue;
                 acciones.Add(h);
             }
@@ -43,7 +36,6 @@ namespace TP4
                 }
             }
 
-            // Respaldo: ataque básico a cualquiera.
             if (mejor == null && yo.Data.ataqueBasico != null)
             {
                 var rivales = bm.Vivos(OtroEquipo(yo.Team));
@@ -70,7 +62,6 @@ namespace TP4
             switch (accion.objetivo)
             {
                 case TargetMode.EnemigoUnico:
-                    // Si alguien provoca, los ataques individuales van a él.
                     var provocadores = rivales.FindAll(u => u.EstaProvocando);
                     foreach (var r in provocadores.Count > 0 ? provocadores : rivales)
                         yield return new List<BattleUnit> { r };
@@ -105,16 +96,12 @@ namespace TP4
                         case EffectType.DanoFijo:
                         {
                             float est = EstimarDano(yo, t, e);
-                            // Preferir el daño relativo a la vida (rematar al débil),
-                            // más una base de "agresividad" para que todos ataquen seguido.
                             puntaje += Mathf.Min(est, t.Vida) / t.VidaMax * 100f + 12f;
-                            if (est >= t.Vida) puntaje += 40f; // bonus por eliminar
+                            if (est >= t.Vida) puntaje += 40f;
                             break;
                         }
                         case EffectType.Curar:
                         {
-                            // Solo vale la pena curar a quien está por debajo de la mitad,
-                            // y se valora la vida que realmente recupera (no la que se desperdicia).
                             if (t.VidaPct >= 0.5f) { puntaje -= 20f; break; }
                             float cura = Formulas.Curacion(yo.GetStat(StatType.Magia), e.potencia, e.valorFijo);
                             float util = Mathf.Min(cura, t.VidaMax - t.Vida) / t.VidaMax * 100f;
@@ -161,12 +148,9 @@ namespace TP4
                 puntaje -= hab.costoEnergia * 0.15f;
                 if (hab.esOverdrive) puntaje += 35f;
             }
-            // Variedad: las acciones de soporte pierden valor si viene encadenando varias seguidas
-            // (el médico también ataca), y repetir exactamente la misma acción se penaliza.
             if (!accion.HaceDano && puntaje > 0f) puntaje *= Mathf.Pow(0.6f, yo.RachaSoporte);
             if (accion == yo.UltimaAccion && accion != yo.Data.ataqueBasico && puntaje > 0f) puntaje *= 0.7f;
 
-            // Acciones lentas valen un poco menos.
             puntaje /= Mathf.Lerp(1f, accion.recuperacion, 0.35f);
             return puntaje;
         }

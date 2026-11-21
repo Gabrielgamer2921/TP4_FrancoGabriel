@@ -11,7 +11,6 @@ namespace TP4
         [Min(0)] public int cantidad = 1;
     }
 
-    /// <summary>Configuración global del torneo: plantel, peleas e inventario inicial.</summary>
     [CreateAssetMenu(menuName = "TP4/Torneo", fileName = "Torneo")]
     public class TournamentData : ScriptableObject
     {

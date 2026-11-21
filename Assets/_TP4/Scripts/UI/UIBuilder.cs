@@ -4,11 +4,6 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>
-    /// Construye UI con la lógica "buscar o crear": si el elemento ya existe (porque viene del prefab
-    /// editable), lo reutiliza TAL CUAL lo dejaste en el editor; si no existe, lo crea con el diseño por defecto.
-    /// Así el mismo código sirve para generar los prefabs y para conectarse a ellos en el juego.
-    /// </summary>
     public class UIBuilder
     {
         public readonly BattleVisuals vis;
@@ -56,7 +51,6 @@ namespace TP4
             return t;
         }
 
-        /// <summary>Texto fijo traducible: lleva un componente <see cref="TextoLoc"/> con español e inglés editables.</summary>
         public Text TextoTraducible(Transform padre, string nombre, string clave, int tamano, TextAnchor alineacion, Color color,
             Action<RectTransform> ubicar)
         {
@@ -70,10 +64,6 @@ namespace TP4
             return t;
         }
 
-        /// <summary>
-        /// Texto con plantilla traducible (ej: "Ronda {0}/{1}"). Si el objeto ya existía sin el componente
-        /// <see cref="TextoLoc"/>, se lo agrega (para prefabs generados con versiones anteriores).
-        /// </summary>
         public Text TextoPlantilla(Transform padre, string nombre, string clave, string ejemplo, int tamano, TextAnchor alineacion,
             Color color, Action<RectTransform> ubicar)
         {

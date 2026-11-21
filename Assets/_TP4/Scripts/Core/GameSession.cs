@@ -3,10 +3,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Estado del torneo en curso: equipo, dificultad, pelea actual e inventario.
-    /// Vive solo en memoria: no hay guardado. Si el jugador pierde o abandona, se reinicia todo.
-    /// </summary>
     public static class GameSession
     {
         public static TournamentData Torneo { get; private set; }
@@ -15,10 +11,8 @@ namespace TP4
         public static int PeleaActual { get; private set; }
         public static Inventory Inventario { get; private set; } = new Inventory();
 
-        /// <summary>El modo de ATB sale de las Opciones (ATB activa / desactivada).</summary>
         public static ModoATB ModoATB => Ajustes.ModoATB;
 
-        // Resetea al entrar a Play aunque el "Domain Reload" esté desactivado.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Reset() => Terminar();
 
@@ -29,7 +23,6 @@ namespace TP4
 
         public static bool EsUltimaPelea => Torneo != null && PeleaActual >= Torneo.peleas.Count - 1;
 
-        /// <summary>Multiplicador de stats de los rivales según la dificultad.</summary>
         public static float MultiplicadorRivales
         {
             get
@@ -55,7 +48,6 @@ namespace TP4
                 if (s.item != null) Inventario.Agregar(s.item, s.cantidad);
         }
 
-        /// <summary>Equipo por defecto: los primeros N del plantel.</summary>
         public static List<RobotData> EquipoPorDefecto(TournamentData torneo)
         {
             var equipo = new List<RobotData>();
@@ -64,28 +56,24 @@ namespace TP4
             return equipo;
         }
 
-        /// <summary>Si se entra directo a la escena de combate (para testear), arma una partida Normal por defecto.</summary>
         public static void AsegurarIniciada(TournamentData torneo)
         {
             if (Iniciada && Torneo == torneo) return;
             NuevoTorneo(torneo, EquipoPorDefecto(torneo), Dificultad.Normal);
         }
 
-        /// <summary>Solo para pruebas: empezar directamente en una pelea.</summary>
         public static void SaltarAPelea(int indice)
         {
             if (Torneo == null) return;
             PeleaActual = Mathf.Clamp(indice, 0, Torneo.peleas.Count - 1);
         }
 
-        /// <summary>Pasa a la siguiente pelea. Devuelve false si el torneo terminó.</summary>
         public static bool AvanzarPelea()
         {
             PeleaActual++;
             return Torneo != null && PeleaActual < Torneo.peleas.Count;
         }
 
-        /// <summary>Borra todo el progreso (derrota, abandono o fin del torneo).</summary>
         public static void Terminar()
         {
             Torneo = null;

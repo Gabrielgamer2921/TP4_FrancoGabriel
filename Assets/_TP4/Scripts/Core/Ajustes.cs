@@ -9,9 +9,6 @@ namespace TP4
         Ingles
     }
 
-    /// <summary>
-    /// Opciones del jugador (se guardan en PlayerPrefs; NO es un guardado de partida).
-    /// </summary>
     public static class Ajustes
     {
         const string KeyATB = "tp4.atbActivo";
@@ -22,7 +19,6 @@ namespace TP4
         static int volumen = 80;
         static Idioma idioma = Idioma.Espanol;
 
-        /// <summary>Se dispara cuando cambia cualquier opción (la UI se refresca).</summary>
         public static event Action Cambio;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -35,10 +31,6 @@ namespace TP4
             AplicarVolumen();
         }
 
-        /// <summary>
-        /// true = combate en tiempo real con barras ATB.
-        /// false = combate por turnos clásico: primero todo tu equipo, después todos los rivales.
-        /// </summary>
         public static bool ATBActivo
         {
             get => atbActivo;
@@ -50,7 +42,6 @@ namespace TP4
             }
         }
 
-        /// <summary>Volumen general, de 1 a 100.</summary>
         public static int Volumen
         {
             get => volumen;
@@ -76,11 +67,6 @@ namespace TP4
 
         public static bool Ingles => idioma == Idioma.Ingles;
 
-        /// <summary>
-        /// Con la ATB activada se usa el modo "Espera" (como FF7): el tiempo corre, pero se frena
-        /// en los submenús y durante las animaciones. Con la ATB desactivada el combate es por turnos
-        /// (ver BattleManager.ModoTurnos) y este valor no se usa.
-        /// </summary>
         public static ModoATB ModoATB => atbActivo ? ModoATB.Espera : ModoATB.Clasico;
 
         static void AplicarVolumen() => AudioListener.volume = volumen / 100f;

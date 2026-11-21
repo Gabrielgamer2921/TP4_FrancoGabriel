@@ -2,19 +2,12 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Todas las fórmulas de combate en un solo lugar para balancear fácil.
-    /// </summary>
     public static class Formulas
     {
-        // ---------- Vida ----------
         public static int VidaMax(int vitalidad) => 50 + vitalidad * 10;
 
-        // ---------- ATB ----------
-        /// <summary>Cuánto de la barra (0..1) se llena por segundo.</summary>
         public static float VelocidadATB(int agilidad) => 0.07f + agilidad * 0.006f;
 
-        // ---------- Daño ----------
         const float FactorDefensa = 4f;
 
         public static int DanoFisico(float fuerza, float defensa, float potencia, float valorFijo)
@@ -23,7 +16,6 @@ namespace TP4
             return AplicarDefensa(bruto, defensa);
         }
 
-        /// <summary>El daño de energía ignora la mitad de la defensa.</summary>
         public static int DanoEnergia(float magia, float defensa, float potencia, float valorFijo)
         {
             float bruto = magia * 2f * potencia + valorFijo;
@@ -42,11 +34,8 @@ namespace TP4
             return Mathf.Max(1, Mathf.RoundToInt(magia * 2f * potencia + valorFijo));
         }
 
-        // ---------- Overdrive ----------
-        /// <summary>Carga por recibir daño (proporcional al % de vida perdido).</summary>
         public static float CargaOverdrivePorDanoRecibido(int dano, int vidaMax) => (float)dano / vidaMax * 0.9f;
 
-        /// <summary>Carga por causar daño.</summary>
         public static float CargaOverdrivePorDanoCausado(int dano, int vidaMaxObjetivo) => (float)dano / vidaMaxObjetivo * 0.35f;
     }
 }

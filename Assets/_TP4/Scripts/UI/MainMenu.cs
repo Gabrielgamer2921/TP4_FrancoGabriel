@@ -5,10 +5,6 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>
-    /// Menú principal: Nueva partida (→ dificultad), Opciones (ATB, volumen, idioma) y Salir.
-    /// No hay guardado: cada "Nueva partida" arranca el torneo desde cero.
-    /// </summary>
     public class MainMenu : MonoBehaviour
     {
         [SerializeField] TournamentData torneo;
@@ -59,9 +55,6 @@ namespace TP4
             Ajustes.Cambio -= AlCambiarAjustes;
         }
 
-        // ---------------------------------------------------------------------
-        // Fondo: los robots del plantel
-        // ---------------------------------------------------------------------
         void MostrarRobots()
         {
             if (torneo == null) return;
@@ -74,19 +67,14 @@ namespace TP4
             }
         }
 
-        // ---------------------------------------------------------------------
-        // UI
-        // ---------------------------------------------------------------------
         void ConstruirUI()
         {
-            // Si existe el prefab editable (TP4 > Generar UI editable) se usa ese; si no, se arma por código.
             GameObject go = visuales != null && visuales.prefabUIMenu != null ? Instantiate(visuales.prefabUIMenu) : new GameObject("MenuUI");
             go.name = "MenuUI";
             var raiz = UIFactory.AsegurarCanvas(go, 0);
             Armar(raiz, new UIBuilder(visuales), this);
         }
 
-        /// <summary>Editor: arma la UI del menú para guardarla como prefab editable.</summary>
         public static GameObject GenerarPlantilla(BattleVisuals vis, GameObject existente = null)
         {
             var go = existente != null ? existente : new GameObject("UI_Menu");
@@ -95,10 +83,8 @@ namespace TP4
             return go;
         }
 
-        /// <summary>Busca o crea cada elemento (los que existen en el prefab se respetan como estén).</summary>
         static void Armar(RectTransform raiz, UIBuilder b, MainMenu m)
         {
-            // Degradé oscuro a la izquierda para que se lea el menú
             b.Rect(raiz, "Sombra", rt =>
             {
                 rt.anchorMin = new Vector2(0, 0);
@@ -150,9 +136,6 @@ namespace TP4
             if (pantalla == Pantalla.Opciones) MostrarOpciones(lista.IndiceActual);
         }
 
-        // ---------------------------------------------------------------------
-        // Pantallas
-        // ---------------------------------------------------------------------
         void MostrarPrincipal(int indice)
         {
             pantalla = Pantalla.Principal;
@@ -196,9 +179,6 @@ namespace TP4
                 () => { Sfx.Play(SfxId.Cancelar, 0.6f); MostrarPrincipal(1); }, indice, 700f);
         }
 
-        // ---------------------------------------------------------------------
-        // Acciones
-        // ---------------------------------------------------------------------
         void NuevaPartida(Dificultad dificultad)
         {
             if (torneo == null)
@@ -209,7 +189,6 @@ namespace TP4
             GameSession.NuevoTorneo(torneo, GameSession.EquipoPorDefecto(torneo), dificultad);
             lista.Activa = false;
 
-            // Cuando exista la pantalla de selección de equipo, se pasa primero por ahí.
             string destino = !string.IsNullOrEmpty(escenaSeleccion) && Application.CanStreamedLevelBeLoaded(escenaSeleccion)
                 ? escenaSeleccion
                 : escenaCombate;
@@ -226,7 +205,6 @@ namespace TP4
         }
     }
 
-    /// <summary>Movimiento suave de "respiración" para los robots del menú.</summary>
     public class Flotar : MonoBehaviour
     {
         public float fase;

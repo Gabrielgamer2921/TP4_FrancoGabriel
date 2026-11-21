@@ -2,10 +2,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Recursos visuales/sonoros compartidos. Un solo lugar para cambiar materiales, fuente y sonidos.
-    /// Cualquier sonido vacío se reemplaza por uno procedural (bip) para que siempre haya feedback.
-    /// </summary>
     [CreateAssetMenu(menuName = "TP4/Visuales de batalla", fileName = "BattleVisuals")]
     public class BattleVisuals : ScriptableObject
     {

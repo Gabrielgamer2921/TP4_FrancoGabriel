@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -10,12 +12,6 @@ using UnityEngine.SceneManagement;
 
 namespace TP4.EditorTools
 {
-    /// <summary>
-    /// Genera todos los ScriptableObjects del juego (estados, módulos, ítems, robots, encuentros, torneo)
-    /// y la escena de combate lista para darle Play.
-    /// Menú: TP4 > 1. Crear contenido y escena de combate.
-    /// Si un asset ya existe NO se sobrescribe (para no pisar tu balance). Para regenerar todo usá la opción 2.
-    /// </summary>
     public static class TP4SetupWizard
     {
         const string Raiz = "Assets/_TP4";
@@ -32,8 +28,6 @@ namespace TP4.EditorTools
             CrearCarpetas();
             CrearVisuales();
             CrearDatos();
-            // Guardar ANTES de crear la escena: NewScene descarga los assets en memoria
-            // y las referencias (y cambios sin guardar) se perderían.
             AssetDatabase.SaveAssets();
             GenerarUI(false);
             CrearEscena();
@@ -57,6 +51,111 @@ namespace TP4.EditorTools
             Debug.Log("[TP4] Datos y UI actualizados (las escenas no se tocaron).");
         }
 
+        static readonly Dictionary<string, string> ModeloDeRobot = new Dictionary<string, string>
+        {
+            { "ROB_Bastion", "George" }, { "ROB_Vanguardia", "Leela" }, { "ROB_Nova", "Mike" }, { "ROB_Chispa", "Stan" },
+            { "RIV_Tuerca", "Leela" }, { "RIV_Remache", "George" }, { "RIV_Voltio", "Mike" },
+            { "RIV_CromoLanza", "Leela" }, { "RIV_CromoMedico", "Stan" }, { "RIV_CromoEscudo", "George" },
+            { "JEFE_Goliat", "Stan" }
+        };
+
+        [MenuItem("TP4/8. Configurar mechas (Quaternius)", priority = 8)]
+        public static void ConfigurarMechas()
+        {
+            var guid = AssetDatabase.FindAssets("George t:Model").FirstOrDefault();
+            if (guid == null) { Debug.LogError("[TP4] No se encontró el Mech Pack de Quaternius en el proyecto."); return; }
+            string dirFbx = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(guid)).Replace('\\', '/');
+            string dirTex = Path.GetDirectoryName(dirFbx).Replace('\\', '/') + "/Textures";
+            if (!AssetDatabase.IsValidFolder(Raiz + "/Art/Controllers")) AssetDatabase.CreateFolder(Raiz + "/Art", "Controllers");
+
+            var modelos = new Dictionary<string, (GameObject fbx, RuntimeAnimatorController ac, Texture2D tex)>();
+            foreach (var nombre in ModeloDeRobot.Values.Distinct())
+            {
+                string ruta = $"{dirFbx}/{nombre}.fbx";
+                ConfigurarImportador(ruta);
+                modelos[nombre] = (AssetDatabase.LoadAssetAtPath<GameObject>(ruta), CrearController(ruta, nombre),
+                    AssetDatabase.LoadAssetAtPath<Texture2D>($"{dirTex}/{nombre}_Texture.png"));
+            }
+            foreach (var par in ModeloDeRobot)
+            {
+                var r = AssetDatabase.LoadAssetAtPath<RobotData>($"{Datos}/Robots/{par.Key}.asset");
+                if (r == null) continue;
+                var m = modelos[par.Value];
+                r.modelo = m.fbx;
+                r.animatorController = m.ac;
+                r.textura = m.tex;
+                EditorUtility.SetDirty(r);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("[TP4] Mechas configurados.");
+        }
+
+        static void ConfigurarImportador(string ruta)
+        {
+            var imp = (ModelImporter)AssetImporter.GetAtPath(ruta);
+            imp.animationType = ModelImporterAnimationType.Generic;
+            var clips = imp.defaultClipAnimations;
+            foreach (var c in clips)
+                c.loopTime = c.name.EndsWith("Idle") || c.name.EndsWith("Dance") || c.name.Contains("Run") || c.name.Contains("Walk");
+            imp.clipAnimations = clips;
+            imp.SaveAndReimport();
+        }
+
+        static AnimationClip Clip(string ruta, string nombre) => AssetDatabase.LoadAllAssetsAtPath(ruta).OfType<AnimationClip>()
+            .FirstOrDefault(c => !c.name.StartsWith("__preview") && (c.name == nombre || c.name.EndsWith("|" + nombre)));
+
+        static RuntimeAnimatorController CrearController(string fbx, string modelo)
+        {
+            string ruta = $"{Raiz}/Art/Controllers/AC_{modelo}.controller";
+            AssetDatabase.DeleteAsset(ruta);
+            var ac = AnimatorController.CreateAnimatorControllerAtPath(ruta);
+            var sm = ac.layers[0].stateMachine;
+            var idle = sm.AddState("Idle");
+            idle.motion = Clip(fbx, "Idle");
+            sm.defaultState = idle;
+
+            void Accion(string trigger, bool volver, params string[] clips)
+            {
+                ac.AddParameter(trigger, AnimatorControllerParameterType.Trigger);
+                AnimatorState previo = null;
+                foreach (var nombre in clips)
+                {
+                    var st = sm.AddState($"{trigger}_{nombre}");
+                    st.motion = Clip(fbx, nombre);
+                    AnimatorStateTransition t;
+                    if (previo == null)
+                    {
+                        t = sm.AddAnyStateTransition(st);
+                        t.AddCondition(AnimatorConditionMode.If, 0, trigger);
+                        t.canTransitionToSelf = false;
+                    }
+                    else
+                    {
+                        t = previo.AddTransition(st);
+                        t.hasExitTime = true;
+                        t.exitTime = 0.9f;
+                    }
+                    t.duration = 0.1f;
+                    previo = st;
+                }
+                if (!volver) return;
+                var vuelta = previo.AddTransition(idle);
+                vuelta.hasExitTime = true;
+                vuelta.exitTime = 0.9f;
+                vuelta.duration = 0.15f;
+            }
+
+            Accion("Attack", true, "Punch");
+            Accion("Shoot", true, "Shoot");
+            Accion("Skill", true, "Yes");
+            Accion("Item", true, "Pickup");
+            Accion("Hit", true, "HitRecieve_1");
+            Accion("Overdrive", true, "Jump", "SwordSlash");
+            Accion("Victory", true, "Dance");
+            Accion("Die", false, "Death");
+            return ac;
+        }
+
         [MenuItem("TP4/2. Regenerar datos (sobrescribe balance)", priority = 2)]
         public static void Regenerar()
         {
@@ -74,9 +173,6 @@ namespace TP4.EditorTools
                 EditorSceneManager.OpenScene(EscenaMenu);
         }
 
-        // =====================================================================
-        // UI editable (prefabs)
-        // =====================================================================
         [MenuItem("TP4/5. Generar o actualizar UI editable (no pisa tus cambios)", priority = 5)]
         public static void GenerarUIEditable()
         {
@@ -108,7 +204,6 @@ namespace TP4.EditorTools
             var vis = AssetDatabase.LoadAssetAtPath<BattleVisuals>($"{Raiz}/BattleVisuals.asset");
             if (vis == null) { Debug.LogError("[TP4] Falta BattleVisuals.asset: corré primero TP4 > 1."); return; }
 
-            // Los degradés tienen que ser assets para que el prefab los guarde.
             if (vis.spriteVentana == null)
                 vis.spriteVentana = GuardarSprite($"{Raiz}/UI/SPR_Ventana.png", UIFactory.TexturaGradiente(vis.colorPanelAbajo, vis.colorPanelArriba));
             if (vis.spriteRelleno == null)
@@ -135,10 +230,6 @@ namespace TP4.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(ruta);
         }
 
-        /// <summary>
-        /// Si el prefab ya existe (y no se pide pisarlo) se ACTUALIZA: solo se agregan los elementos o
-        /// componentes nuevos que falten; todo lo que editaste queda igual.
-        /// </summary>
         static GameObject GuardarPrefab(string ruta, bool pisar, Func<GameObject, GameObject> crear)
         {
             var existente = AssetDatabase.LoadAssetAtPath<GameObject>(ruta);
@@ -165,7 +256,6 @@ namespace TP4.EditorTools
         [MenuItem("TP4/Probar pelea 3 (Goliat)", priority = 22)]
         public static void ProbarPelea3() => ProbarPelea(2);
 
-        /// <summary>Abre la escena de combate y le da Play directamente en la pelea elegida.</summary>
         static void ProbarPelea(int indice)
         {
             if (EditorApplication.isPlaying) return;
@@ -182,9 +272,6 @@ namespace TP4.EditorTools
                 EditorSceneManager.OpenScene(Escena);
         }
 
-        // =====================================================================
-        // Carpetas y helpers
-        // =====================================================================
         static void CrearCarpetas()
         {
             foreach (var c in new[]
@@ -199,7 +286,6 @@ namespace TP4.EditorTools
             }
         }
 
-        /// <summary>Carga el asset si existe; si no, lo crea y lo llena.</summary>
         static T Asset<T>(string ruta, Action<T> llenar) where T : ScriptableObject
         {
             var existente = AssetDatabase.LoadAssetAtPath<T>(ruta);
@@ -229,7 +315,6 @@ namespace TP4.EditorTools
             return m;
         }
 
-        // ---------- Efectos ----------
         static ActionEffect Fis(float pot) => new ActionEffect { tipo = EffectType.DanoFisico, potencia = pot };
         static ActionEffect Ene(float pot) => new ActionEffect { tipo = EffectType.DanoEnergia, potencia = pot };
         static ActionEffect Fijo(float v) => new ActionEffect { tipo = EffectType.DanoFijo, potencia = 0, valorFijo = v };
@@ -300,7 +385,6 @@ namespace TP4.EditorTools
             });
         }
 
-        // ---------- Traducciones ----------
         static void EN(ActionData a, string nombreEN, string descEN)
         {
             if (a == null) return;
@@ -351,9 +435,6 @@ namespace TP4.EditorTools
             });
         }
 
-        // =====================================================================
-        // Visuales
-        // =====================================================================
         static BattleVisuals CrearVisuales()
         {
             var lit = Mat("MAT_Placeholder", "Universal Render Pipeline/Lit", Color.gray);
@@ -370,12 +451,8 @@ namespace TP4.EditorTools
             });
         }
 
-        // =====================================================================
-        // Datos de juego
-        // =====================================================================
         static TournamentData CrearDatos()
         {
-            // ---------- Estados ----------
             var quemadura = Asset<StatusData>($"{Datos}/Estados/EST_Quemadura.asset", s =>
             {
                 s.nombre = "Quemadura"; s.abreviatura = "QUE"; s.color = new Color(1f, 0.5f, 0.15f);
@@ -392,8 +469,6 @@ namespace TP4.EditorTools
                 s.duracion = 12f; s.intervaloTick = 3f; s.danoPorTickPct = 0.03f;
                 s.modificadores = new List<StatModifierDef> { new StatModifierDef { stat = StatType.Defensa, porcentaje = -0.25f } };
             });
-            // Red eléctrica (módulo único del jefe): atrapa (no puede actuar) y hace daño eléctrico.
-            // Un aliado puede liberarlo con "Liberar", gastando su turno.
             var redEstado = Asset<StatusData>($"{Datos}/Estados/EST_RedElectrica.asset", s =>
             {
                 s.nombre = "Red eléctrica"; s.abreviatura = "RED"; s.color = new Color(0.4f, 0.95f, 1f);
@@ -408,11 +483,9 @@ namespace TP4.EditorTools
             Color cVioleta = new Color(0.75f, 0.4f, 1f);
             Color cCian = new Color(0.3f, 0.9f, 1f);
 
-            // ---------- Ataques básicos ----------
             var golpe = Hab("HAB_Golpe", "Golpe", "Ataque cuerpo a cuerpo básico.", TargetMode.EnemigoUnico, 0, 1f, ActionAnim.Ataque, true, cBlanco, Fis(1f));
             var disparo = Hab("HAB_Disparo", "Disparo", "Disparo básico a distancia.", TargetMode.EnemigoUnico, 0, 1f, ActionAnim.Disparo, false, cCian, Fis(0.9f));
 
-            // ---------- Bastión (Tanque) ----------
             var provocar = Hab("HAB_Provocar", "Provocar", "Atrae los ataques enemigos durante 12 s y sube su Defensa.", TargetMode.Propio, 8, 0.7f, ActionAnim.Habilidad, false, cNaranja,
                 Provocar(12f), Stat(StatType.Defensa, 0.3f, 12f));
             var escudo = Hab("HAB_Escudo", "Escudo", "+50% de Defensa a un aliado durante 20 s.", TargetMode.AliadoUnico, 10, 1f, ActionAnim.Habilidad, false, cCian,
@@ -422,7 +495,6 @@ namespace TP4.EditorTools
             var muralla = Overdrive("OD_Muralla", "Muralla", "Todo el equipo gana +60% de Defensa y recupera algo de vida.", TargetMode.TodosAliados, false, cCian,
                 Stat(StatType.Defensa, 0.6f, 25f), Cura(0.5f, 40f));
 
-            // ---------- Vanguardia (Asalto) ----------
             var cargado = Hab("HAB_GolpeCargado", "Golpe cargado", "Golpe devastador. Tarda más en volver a actuar.", TargetMode.EnemigoUnico, 10, 1.6f, ActionAnim.Ataque, true, cBlanco,
                 Fis(2.2f));
             var rafaga = Hab("HAB_Rafaga", "Ráfaga", "Golpe débil pero muy rápido de recuperar.", TargetMode.EnemigoUnico, 6, 0.55f, ActionAnim.Ataque, true, cBlanco,
@@ -432,7 +504,6 @@ namespace TP4.EditorTools
             var tormenta = Overdrive("OD_TormentaAcero", "Tormenta de acero", "Una ráfaga de golpes demoledora contra un enemigo.", TargetMode.EnemigoUnico, true, cBlanco,
                 Fis(4f));
 
-            // ---------- Nova (Artillero) ----------
             var emp = Hab("HAB_EMP", "Descarga EMP", "Daño de energía con 70% de Parálisis (congela la ATB).", TargetMode.EnemigoUnico, 14, 1.1f, ActionAnim.Disparo, false, cAmarillo,
                 Ene(0.9f), Estado(paralisis, 0.7f));
             var acido = Hab("HAB_LluviaAcida", "Lluvia ácida", "Daño a todos los enemigos con 60% de Corrosión (−Defensa).", TargetMode.TodosEnemigos, 20, 1.3f, ActionAnim.Disparo, false, cVerde,
@@ -442,7 +513,6 @@ namespace TP4.EditorTools
             var orbital = Overdrive("OD_CanonOrbital", "Cañón orbital", "Rayo desde el cielo que golpea a todos los enemigos.", TargetMode.TodosEnemigos, false, cVioleta,
                 Ene(2.6f));
 
-            // ---------- Chispa (Mecánico) ----------
             var reparar = Hab("HAB_Reparar", "Reparar", "Recupera vida de un aliado.", TargetMode.AliadoUnico, 12, 0.9f, ActionAnim.Habilidad, false, cVerde,
                 Cura(1.6f, 20f));
             var overclock = Hab("HAB_Overclock", "Overclock", "Llena gran parte de la ATB de un aliado y sube su Agilidad.", TargetMode.AliadoUnico, 10, 0.8f, ActionAnim.Habilidad, false, cCian,
@@ -452,19 +522,16 @@ namespace TP4.EditorTools
             var reinicio = Overdrive("OD_ReinicioTotal", "Reinicio total", "Cura a todo el equipo, limpia estados y recarga energía.", TargetMode.TodosAliados, false, cVerde,
                 Cura(1.5f, 60f), Limpiar(), Energia(15f));
 
-            // ---------- Jefe ----------
             var puno = Hab("HAB_PunoSismico", "Puño sísmico", "", TargetMode.EnemigoUnico, 0, 1f, ActionAnim.Ataque, true, cNaranja, Fis(1.5f));
             var laser = Hab("HAB_LaserBarrido", "Láser de barrido", "", TargetMode.TodosEnemigos, 15, 1.2f, ActionAnim.Disparo, false, new Color(1f, 0.25f, 0.2f), Ene(0.8f));
             var redElectrica = Hab("HAB_RedElectrica", "Red eléctrica",
                 "Atrapa a un robot en una red electrificada: no puede actuar y recibe daño. Un aliado puede liberarlo.",
                 TargetMode.EnemigoUnico, 25, 1.2f, ActionAnim.Disparo, false, new Color(0.4f, 0.95f, 1f), Ene(0.9f), Estado(redEstado, 1f));
 
-            // ---------- Acción común ----------
             var liberar = Hab("HAB_Liberar", "Liberar", "Libera a un aliado atrapado en la red eléctrica. Gasta el turno.",
                 TargetMode.AliadoUnico, 0, 1f, ActionAnim.Habilidad, false, new Color(0.5f, 1f, 1f),
                 new ActionEffect { tipo = EffectType.Liberar });
 
-            // ---------- Ítems ----------
             var nucleoEnergia = Item("ITEM_NucleoEnergia", "Núcleo de energía", "Recupera 150 de vida a un aliado.", TargetMode.AliadoUnico, cVerde, Cura(0f, 150f));
             var celda = Item("ITEM_CeldaEnergia", "Celda de energía", "Recupera 40 de energía a un aliado.", TargetMode.AliadoUnico, cVioleta, Energia(40f));
             var bomba = Item("ITEM_Bomba", "Bomba", "70 de daño a todos los enemigos y −20% Defensa por 15 s.", TargetMode.TodosEnemigos, cNaranja,
@@ -472,7 +539,6 @@ namespace TP4.EditorTools
             var pieza = Item("ITEM_PiezaDorada", "Pieza dorada", "+30% de Fuerza a un aliado durante 25 s.", TargetMode.AliadoUnico, cAmarillo,
                 Stat(StatType.Fuerza, 0.3f, 25f));
 
-            // ---------- Robots del jugador ----------
             var bastion = Robot("ROB_Bastion", "Bastión", RobotRole.Tanque, "Tanque. Mucha vida y defensa; protege al equipo.", new Color(0.25f, 0.45f, 0.95f),
                 new Stats(16, 8, 30, 10, 22), 50, golpe, muralla, 1.1f, provocar, escudo, pulso);
             var vanguardia = Robot("ROB_Vanguardia", "Vanguardia", RobotRole.Asalto, "Asalto. Daño físico alto y rápido.", new Color(0.9f, 0.25f, 0.25f),
@@ -482,7 +548,6 @@ namespace TP4.EditorTools
             var chispa = Robot("ROB_Chispa", "Chispa", RobotRole.Mecanico, "Mecánico. Repara, acelera y purga al equipo.", new Color(0.95f, 0.75f, 0.2f),
                 new Stats(12, 16, 18, 20, 12), 80, disparo, reinicio, 0.95f, reparar, overclock, purga);
 
-            // ---------- Rivales ----------
             var tuerca = Robot("RIV_Tuerca", "Tuerca", RobotRole.Asalto, "", new Color(0.55f, 0.5f, 0.45f),
                 new Stats(16, 14, 15, 8, 8), 30, golpe, null, 0.95f, rafaga);
             var remache = Robot("RIV_Remache", "Remache", RobotRole.Tanque, "", new Color(0.45f, 0.45f, 0.5f),
@@ -500,14 +565,12 @@ namespace TP4.EditorTools
             var goliat = Robot("JEFE_Goliat", "Goliat Ω", RobotRole.Jefe, "Campeón invicto del torneo.", new Color(0.35f, 0.32f, 0.3f),
                 new Stats(26, 22, 80, 22, 18), 300, puno, null, 1.9f, laser);
             ConfigurarJefe(goliat, puno, laser, redElectrica);
-            // La Red no se puede encadenar: espera 3 acciones del jefe entre usos.
             if (redElectrica.enfriamiento == 0)
             {
                 redElectrica.enfriamiento = 3;
                 EditorUtility.SetDirty(redElectrica);
             }
 
-            // ---------- Traducciones al inglés (solo se completan si están vacías) ----------
             EN(golpe, "Strike", "Basic melee attack.");
             EN(disparo, "Shot", "Basic ranged shot.");
             EN(provocar, "Taunt", "Draws enemy attacks for 12 s and raises Defense.");
@@ -544,7 +607,6 @@ namespace TP4.EditorTools
             EN(liberar, "Free", "Frees an ally caught in the electric net. Uses up the turn.");
             ENEstado(redEstado, "Electric net", "NET");
 
-            // ---------- Encuentros ----------
             var enc1 = Asset<EncounterData>($"{Datos}/Encuentros/ENC_1_Chatarreros.asset", e =>
             {
                 e.nombre = "Ronda 1"; e.nombreRival = "Los Chatarreros";
@@ -565,7 +627,6 @@ namespace TP4.EditorTools
             ENEncuentro(enc2, "Semifinal", "Chrome Squad");
             ENEncuentro(enc3, "Final", "Goliath Ω");
 
-            // ---------- Torneo ----------
             var torneo = Asset<TournamentData>($"{Datos}/Torneo.asset", t =>
             {
                 t.nombre = "Torneo de Mechas";
@@ -589,14 +650,8 @@ namespace TP4.EditorTools
             return torneo;
         }
 
-        /// <summary>
-        /// Jefe con 3 ataques: Puño sísmico (cuerpo a cuerpo, uno), Láser de barrido (distancia, todos)
-        /// y Red eléctrica (módulo único). Las fases lo potencian en vez de darle más ataques.
-        /// Se aplica también a un Goliat ya existente de una versión anterior (si todavía no tiene la Red).
-        /// </summary>
         static void ConfigurarJefe(RobotData jefe, AbilityData puno, AbilityData laser, AbilityData red)
         {
-            // Versión 3: la Red se desbloquea en la fase 2; 1 acción por turno, 2 en la fase final.
             bool yaConfigurado = !jefe.habilidades.Contains(red) && jefe.fases != null && jefe.fases.Count >= 2
                                  && jefe.fases[0].habilidadesNuevas.Contains(red);
             if (yaConfigurado) return;
@@ -606,7 +661,6 @@ namespace TP4.EditorTools
             jefe.azarIA = 0.15f;
             jefe.fases = new List<BossPhase>
             {
-                // Fase 2 (60%): desbloquea todos sus movimientos (la Red eléctrica).
                 new BossPhase
                 {
                     mensaje = "¡Goliat entra en modo combate!", mensajeEN = "Goliath enters combat mode!",
@@ -615,7 +669,6 @@ namespace TP4.EditorTools
                     bonusStats = new List<StatModifierDef>(),
                     colorTinte = new Color(1f, 0.55f, 0.2f)
                 },
-                // Fase 3 (30%): más daño y 2 acciones por turno.
                 new BossPhase
                 {
                     mensaje = "¡NÚCLEO AL LÍMITE!", mensajeEN = "CORE AT THE LIMIT!",
@@ -632,14 +685,10 @@ namespace TP4.EditorTools
             EditorUtility.SetDirty(jefe);
         }
 
-        // =====================================================================
-        // Escena
-        // =====================================================================
         static void CrearEscena()
         {
             var escena = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            // Recargar desde disco después de NewScene (las referencias anteriores quedan inválidas).
             var torneo = AssetDatabase.LoadAssetAtPath<TournamentData>($"{Datos}/Torneo.asset");
             var vis = AssetDatabase.LoadAssetAtPath<BattleVisuals>($"{Raiz}/BattleVisuals.asset");
             if (torneo == null || vis == null)
@@ -647,7 +696,6 @@ namespace TP4.EditorTools
 
             ConstruirArena(vis);
 
-            // Spawns: jugador a la derecha (+X), enemigos a la izquierda (−X), estilo FF7.
             var spawns = new GameObject("Spawns").transform;
             var sj = new Transform[3];
             var se = new Transform[3];
@@ -658,12 +706,9 @@ namespace TP4.EditorTools
             }
             var sjefe = Spawn("Jefe", spawns, new Vector3(-6.5f, 0, 0), Vector3.right);
 
-            // Cámara
-            // Cámara alta y lejana, estilo FF7: se ve todo el campo, incluido el jefe gigante.
             var battleCam = CrearCamara(PosCamaraCombate, new Vector3(-0.5f, 0f, 0.3f), 42f);
             CrearPostProceso();
 
-            // BattleManager
             var bmGO = new GameObject("BattleManager");
             var bm = bmGO.AddComponent<BattleManager>();
             var so = new SerializedObject(bm);
@@ -693,7 +738,6 @@ namespace TP4.EditorTools
 
             ConstruirArena(vis);
 
-            // Los 4 robots del plantel en fila, del lado derecho de la pantalla, mirando a cámara.
             var robots = new GameObject("Robots del menú").transform;
             var puntos = new Transform[4];
             var posCamara = new Vector3(-0.5f, 2.4f, -8.5f);
@@ -721,10 +765,8 @@ namespace TP4.EditorTools
             EditorSceneManager.SaveScene(escena, EscenaMenu);
         }
 
-        /// <summary>Iluminación y arena (compartida por el combate y el menú).</summary>
         static void ConstruirArena(BattleVisuals vis)
         {
-            // Iluminación
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.35f, 0.4f, 0.6f);
             RenderSettings.ambientEquatorColor = new Color(0.2f, 0.22f, 0.3f);
@@ -742,7 +784,6 @@ namespace TP4.EditorTools
             sol.shadows = LightShadows.Soft;
             sol.transform.rotation = Quaternion.Euler(50f, -40f, 0f);
 
-            // Arena
             var arena = new GameObject("Arena");
             var emisivoCian = Mat("MAT_NeonCian", "Universal Render Pipeline/Unlit", new Color(0.2f, 0.85f, 1f), true);
             var emisivoMagenta = Mat("MAT_NeonMagenta", "Universal Render Pipeline/Unlit", new Color(1f, 0.25f, 0.7f), true);
@@ -756,7 +797,6 @@ namespace TP4.EditorTools
             for (int i = 0; i < 10; i++)
             {
                 float ang = i * Mathf.PI * 2f / 10f;
-                // No poner pilares entre la cámara de combate y el centro.
                 float angCamara = Mathf.Atan2(PosCamaraCombate.z, PosCamaraCombate.x);
                 if (Mathf.Abs(Mathf.DeltaAngle(ang * Mathf.Rad2Deg, angCamara * Mathf.Rad2Deg)) < 50f) continue;
                 var pos = new Vector3(Mathf.Cos(ang) * 18f, 3f, Mathf.Sin(ang) * 18f);
@@ -837,7 +877,6 @@ namespace TP4.EditorTools
                 var tone = perfil.Add<Tonemapping>(true);
                 tone.mode.Override(TonemappingMode.ACES);
 
-                // Los componentes del perfil se guardan como sub-assets.
                 foreach (var c in perfil.components) AssetDatabase.AddObjectToAsset(c, perfil);
                 EditorUtility.SetDirty(perfil);
                 AssetDatabase.SaveAssets();
@@ -848,7 +887,6 @@ namespace TP4.EditorTools
             vol.sharedProfile = perfil;
         }
 
-        /// <summary>Menú principal primero (es la escena con la que arranca el juego), luego el resto.</summary>
         static void ConfigurarBuild()
         {
             var escenas = new List<EditorBuildSettingsScene>

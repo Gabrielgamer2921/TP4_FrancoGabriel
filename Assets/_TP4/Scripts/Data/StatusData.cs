@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>Estado alterado temporal (Quemadura, Parálisis, Corrosión...).</summary>
     [CreateAssetMenu(menuName = "TP4/Estado alterado", fileName = "EST_Nuevo")]
     public class StatusData : ScriptableObject
     {

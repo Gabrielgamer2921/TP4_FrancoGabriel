@@ -13,10 +13,6 @@ namespace TP4
         Derrota
     }
 
-    /// <summary>
-    /// Orquesta el combate: crea los robots, avanza las barras ATB (modo activo),
-    /// pide decisiones a la IA, ejecuta la cola de acciones y detecta victoria/derrota.
-    /// </summary>
     public class BattleManager : MonoBehaviour
     {
         public static BattleManager Instance { get; private set; }
@@ -37,7 +33,6 @@ namespace TP4
 
         public readonly List<BattleUnit> Jugadores = new List<BattleUnit>();
         public readonly List<BattleUnit> Enemigos = new List<BattleUnit>();
-        /// <summary>Robots del jugador con la barra llena esperando una orden (en orden de llegada).</summary>
         public readonly List<BattleUnit> ListosJugador = new List<BattleUnit>();
 
         readonly Queue<ActionRequest> cola = new Queue<ActionRequest>();
@@ -46,20 +41,11 @@ namespace TP4
         public BattlePhase Fase { get; private set; } = BattlePhase.Intro;
         public bool PausaCinematica { get; private set; }
 
-        /// <summary>
-        /// true = ATB desactivada: combate por turnos clásico (estilo The 7th Saga).
-        /// Primero actúa todo tu equipo y después todos los rivales, sin barras ni apuro.
-        /// Se fija al empezar cada pelea.
-        /// </summary>
         public bool ModoTurnos { get; private set; }
 
         BattleUnit turnoActual;
         BattleUnit actorEjecutando;
 
-        /// <summary>
-        /// El robot al que le toca ahora: por turnos, el que está jugando su turno;
-        /// en ATB, el que está ejecutando una acción o, si no, el primero esperando una orden.
-        /// </summary>
         public BattleUnit UnidadEnTurno
         {
             get
@@ -70,17 +56,10 @@ namespace TP4
             }
         }
 
-        /// <summary>Modo por turnos: de quién es la fase actual.</summary>
         public Team FaseDe { get; private set; } = Team.Jugador;
 
-        /// <summary>Modo por turnos: cuántos "segundos" de estados/buffs pasan por cada turno.</summary>
         const float SegundosPorTurno = 3f;
 
-        /// <summary>
-        /// ¿Está detenido el tiempo de la ATB? Depende del modo elegido:
-        /// Activo = solo en cinemáticas; Espera = además en submenús y durante las animaciones;
-        /// Clásico = además siempre que haya un robot tuyo esperando una orden.
-        /// </summary>
         public bool TiempoDetenido
         {
             get
@@ -114,7 +93,6 @@ namespace TP4
         void Start()
         {
 #if UNITY_EDITOR
-            // Red de seguridad en el editor: si falta la referencia, buscar los assets en el proyecto.
             if (torneo == null) torneo = BuscarAsset<TournamentData>();
             if (visuales == null) visuales = BuscarAsset<BattleVisuals>();
 #endif
@@ -128,7 +106,6 @@ namespace TP4
 
             GameSession.AsegurarIniciada(torneo);
 #if UNITY_EDITOR
-            // Menú TP4 > Probar pelea N: arranca directo en esa pelea.
             int prueba = UnityEditor.EditorPrefs.GetInt("tp4.peleaPrueba", -1);
             if (prueba >= 0)
             {
@@ -161,7 +138,6 @@ namespace TP4
             StartCoroutine(Intro());
         }
 
-        /// <summary>Textos que dependen del idioma (se llama también al cambiar de idioma).</summary>
         public void RefrescarTextos()
         {
             if (UI == null || Encuentro == null) return;
@@ -182,9 +158,6 @@ namespace TP4
             if (ModoTurnos) StartCoroutine(BucleTurnos());
         }
 
-        // ---------------------------------------------------------------------
-        // Modo por turnos (ATB desactivada)
-        // ---------------------------------------------------------------------
         IEnumerator BucleTurnos()
         {
             while (Fase == BattlePhase.EnCurso)
@@ -199,7 +172,6 @@ namespace TP4
         {
             FaseDe = equipo;
             var orden = Vivos(equipo);
-            // Dentro de la fase, el más ágil actúa primero.
             orden.Sort((a, b) => b.GetStat(StatType.Agilidad).CompareTo(a.GetStat(StatType.Agilidad)));
             foreach (var u in orden) { u.ATB = 1f; u.NotificarCambio(); }
 
@@ -222,11 +194,9 @@ namespace TP4
         IEnumerator TurnoDe(BattleUnit u)
         {
             turnoActual = u;
-            // Los estados avanzan al empezar el turno (la quemadura puede rematarlo).
             u.AvanzarTurno(SegundosPorTurno);
             if (!u.IsAlive || Fase != BattlePhase.EnCurso) yield break;
 
-            // La parálisis le hace perder el turno.
             if (u.ATBCongelada)
             {
                 UI.Popup(u, Loc.T(u.TieneEstadoLiberable ? "msg.atrapado" : "msg.pierdeTurno"), new Color(1f, 0.95f, 0.3f), 30);
@@ -234,18 +204,15 @@ namespace TP4
                 yield break;
             }
 
-            // El jefe puede tener varias acciones por turno; Overclock suma una extra.
             int restantes = u.AccionesPorTurno;
             while (restantes > 0 && u.IsAlive && Fase == BattlePhase.EnCurso)
             {
                 restantes--;
-                // Si quedó atrapado/paralizado entre una acción y otra, pierde el resto del turno.
                 if (u.ATBCongelada) yield break;
                 if (u.EsJugador)
                 {
                     u.State = UnitState.Listo;
                     if (!ListosJugador.Contains(u)) ListosJugador.Add(u);
-                    // Esperar a que el jugador elija (la UI encola la acción).
                     while (u.IsAlive && u.State == UnitState.Listo && Fase == BattlePhase.EnCurso) yield return null;
                 }
                 else
@@ -255,7 +222,6 @@ namespace TP4
                     Encolar(req);
                 }
 
-                // Esperar a que se ejecute.
                 while (Fase == BattlePhase.EnCurso && (cola.Count > 0 || ejecutando)) yield return null;
                 if (u.State != UnitState.Muerto) u.State = UnitState.Cargando;
 
@@ -277,9 +243,6 @@ namespace TP4
         }
 #endif
 
-        // ---------------------------------------------------------------------
-        // Creación
-        // ---------------------------------------------------------------------
         void CrearUnidades()
         {
             var equipo = GameSession.Equipo;
@@ -306,14 +269,12 @@ namespace TP4
 
             var unit = go.AddComponent<BattleUnit>();
             var view = go.AddComponent<UnitView>();
-            // La dificultad escala las stats de los rivales.
             unit.Init(data, team, slot, view, team == Team.Enemigo ? GameSession.MultiplicadorRivales : 1f);
             view.Construir(unit, visuales);
 
             unit.Died += AlMorir;
             unit.EstadoAplicado += (u, estado) =>
             {
-                // Feedback claro de la Red eléctrica: cartel + cómo salir.
                 if (estado.liberable && u.EsJugador)
                 {
                     UI.Banner(Loc.T("msg.redBanner", u.Nombre), 2f, new Color(0.5f, 0.95f, 1f));
@@ -329,9 +290,6 @@ namespace TP4
             return unit;
         }
 
-        // ---------------------------------------------------------------------
-        // Bucle principal
-        // ---------------------------------------------------------------------
         void Update()
         {
             if (Fase != BattlePhase.EnCurso) return;
@@ -344,7 +302,6 @@ namespace TP4
                 foreach (var u in Enemigos) if (u.TickTiempo(dt, velocidad)) AlQuedarListo(u);
             }
 
-            // Los que murieron o fueron paralizados dejan de estar listos.
             ListosJugador.RemoveAll(u => !u.IsAlive || u.State != UnitState.Listo);
 
             if (!ejecutando && cola.Count > 0 && Fase == BattlePhase.EnCurso)
@@ -365,7 +322,6 @@ namespace TP4
             }
         }
 
-        /// <summary>Pasa el primer robot listo al final de la fila (comando "Cambiar").</summary>
         public void RotarListos()
         {
             if (ListosJugador.Count < 2) return;
@@ -379,14 +335,10 @@ namespace TP4
             if (req == null || req.actor == null || req.accion == null) return;
             req.actor.State = UnitState.EnCola;
             ListosJugador.Remove(req.actor);
-            // El ítem se reserva al elegirlo para que otro robot no use el mismo.
             if (req.Item != null) GameSession.Inventario.Consumir(req.Item);
             cola.Enqueue(req);
         }
 
-        // ---------------------------------------------------------------------
-        // Ejecución de acciones
-        // ---------------------------------------------------------------------
         IEnumerator Ejecutar(ActionRequest req)
         {
             ejecutando = true;
@@ -434,7 +386,6 @@ namespace TP4
 
             yield return actor.View.Preparar(accion, objetivos);
 
-            // ---- Impacto ----
             bool overdrive = hab != null && hab.esOverdrive;
             foreach (var t in objetivos)
             {
@@ -454,7 +405,6 @@ namespace TP4
                 PausaCinematica = false;
             }
 
-            // Memoria para la IA (para que no repita siempre lo mismo).
             actor.RachaSoporte = accion.HaceDano ? 0 : actor.RachaSoporte + 1;
             actor.UltimaAccion = accion;
             actor.RegistrarUso(accion);
@@ -479,7 +429,6 @@ namespace TP4
                     return Vivos(actor.Team);
                 default:
                 {
-                    // Objetivo único: si murió mientras esperaba en la cola, se elige otro del mismo equipo.
                     var original = req.objetivos.Count > 0 ? req.objetivos[0] : null;
                     if (original != null && original.IsAlive) return new List<BattleUnit> { original };
                     Team equipo = req.accion.objetivo == TargetMode.AliadoUnico ? actor.Team : rival;
@@ -492,7 +441,6 @@ namespace TP4
 
         void AplicarEfectos(BattleUnit actor, ActionData accion, BattleUnit t, bool esOverdrive)
         {
-            // Durante un Overdrive no se recarga la barra del que lo usa.
             BattleUnit cargador = esOverdrive ? null : actor;
             bool sonoGolpe = false;
 
@@ -555,9 +503,6 @@ namespace TP4
             if (sonoGolpe) Sfx.Play(accion.sfxImpacto, SfxId.Golpe, 0.9f);
         }
 
-        // ---------------------------------------------------------------------
-        // Fin del combate
-        // ---------------------------------------------------------------------
         void AlMorir(BattleUnit u)
         {
             ListosJugador.Remove(u);
@@ -598,14 +543,12 @@ namespace TP4
             UI.MostrarFin(false, false);
         }
 
-        // Llamados desde los botones del panel de fin / pausa
         public void Continuar()
         {
             if (GameSession.AvanzarPelea()) RecargarEscena();
             else VolverAlMenu();
         }
 
-        /// <summary>Sin guardado: volver al menú borra todo el progreso del torneo.</summary>
         public void VolverAlMenu()
         {
             GameSession.Terminar();
@@ -624,9 +567,6 @@ namespace TP4
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
-        // ---------------------------------------------------------------------
-        // Consultas
-        // ---------------------------------------------------------------------
         public List<BattleUnit> DeEquipo(Team t) => t == Team.Jugador ? Jugadores : Enemigos;
 
         public IEnumerable<BattleUnit> Todas()

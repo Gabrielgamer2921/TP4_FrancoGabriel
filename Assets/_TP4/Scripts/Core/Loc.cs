@@ -3,15 +3,10 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>
-    /// Traducciones de la interfaz (español / inglés).
-    /// Los textos de los datos (habilidades, ítems, etc.) tienen sus propios campos "EN" en cada ScriptableObject.
-    /// </summary>
     public static class Loc
     {
         static readonly Dictionary<string, string[]> tabla = new Dictionary<string, string[]>
         {
-            // ---------- Menú principal ----------
             { "titulo", new[] { "TORNEO DE MECHAS", "MECHA TOURNAMENT" } },
             { "subtitulo", new[] { "Combate por turnos ATB", "ATB turn-based combat" } },
             { "menu.nueva", new[] { "Nueva partida", "New game" } },
@@ -24,7 +19,6 @@ namespace TP4
             { "menu.controles", new[] { "Flechas/WASD o stick: mover   ·   Enter/Espacio o A: confirmar   ·   Esc o B: volver",
                                          "Arrows/WASD or stick: move   ·   Enter/Space or A: confirm   ·   Esc or B: back" } },
 
-            // ---------- Dificultad ----------
             { "dif.titulo", new[] { "Elegí la dificultad", "Choose difficulty" } },
             { "dif.Facil", new[] { "Fácil", "Easy" } },
             { "dif.Normal", new[] { "Normal", "Normal" } },
@@ -35,7 +29,6 @@ namespace TP4
             { "dif.Dificil.ayuda", new[] { "Para aquellos jugadores que busquen un desafío más intenso.", "For players looking for a more intense challenge." } },
             { "dif.Mecha.ayuda", new[] { "El desafío final para aquellos que desean un verdadero reto.", "The ultimate challenge for those who want a true test." } },
 
-            // ---------- Opciones ----------
             { "op.titulo", new[] { "Opciones", "Options" } },
             { "op.atb", new[] { "ATB activa", "Active ATB" } },
             { "op.atb.ayuda", new[] { "Activada: combate en tiempo real con barras ATB. Desactivada: por turnos clásicos (primero tu equipo, después los rivales).",
@@ -49,7 +42,6 @@ namespace TP4
             { "op.idioma.ayuda", new[] { "Idioma de los textos.", "Text language." } },
             { "op.idioma.valor", new[] { "Español", "English" } },
 
-            // ---------- Pausa ----------
             { "pausa.titulo", new[] { "PAUSA", "PAUSED" } },
             { "pausa.continuar", new[] { "Continuar", "Resume" } },
             { "pausa.abandonar", new[] { "Abandonar torneo", "Quit tournament" } },
@@ -59,7 +51,6 @@ namespace TP4
             { "pausa.no", new[] { "No", "No" } },
             { "pausa.hint", new[] { "Pausa: Esc / P / Start", "Pause: Esc / P / Start" } },
 
-            // ---------- Combate: paneles ----------
             { "ui.nombre", new[] { "NOMBRE", "NAME" } },
             { "ui.vida", new[] { "VIDA", "HP" } },
             { "ui.energia", new[] { "ENERGÍA", "ENERGY" } },
@@ -78,7 +69,6 @@ namespace TP4
             { "ui.ronda", new[] { "Ronda {0}/{1} - {3}", "Round {0}/{1} - {3}" } },
             { "ui.turnoDe", new[] { "Turno: {0}", "Turn: {0}" } },
 
-            // ---------- Combate: comandos ----------
             { "cmd.atacar", new[] { "Atacar", "Attack" } },
             { "cmd.overdrive", new[] { "OVERDRIVE", "OVERDRIVE" } },
             { "cmd.modulos", new[] { "Módulos", "Modules" } },
@@ -101,7 +91,6 @@ namespace TP4
             { "est.prov", new[] { "PROV", "TAUNT" } },
             { "est.ko", new[] { "KO", "KO" } },
 
-            // ---------- Combate: mensajes ----------
             { "msg.overdrive", new[] { "¡OVERDRIVE!", "OVERDRIVE!" } },
             { "msg.purgado", new[] { "Purgado", "Cleansed" } },
             { "msg.provoca", new[] { "¡Provoca!", "Taunt!" } },
@@ -114,7 +103,6 @@ namespace TP4
             { "fin.siguiente", new[] { "Siguiente pelea", "Next battle" } },
             { "fin.menu", new[] { "Menú principal", "Main menu" } },
 
-            // ---------- Stats (abreviaturas) ----------
             { "stat.Fuerza", new[] { "FUE", "STR" } },
             { "stat.Agilidad", new[] { "AGI", "AGI" } },
             { "stat.Vitalidad", new[] { "VIT", "VIT" } },
@@ -134,7 +122,6 @@ namespace TP4
 
         public static string T(string clave, params object[] args) => string.Format(T(clave), args);
 
-        /// <summary>Devuelve el texto en inglés si corresponde y existe; si no, el español.</summary>
         public static string Elegir(string es, string en) => Ajustes.Ingles && !string.IsNullOrEmpty(en) ? en : es;
 
         public static string Stat(StatType s) => T("stat." + s);

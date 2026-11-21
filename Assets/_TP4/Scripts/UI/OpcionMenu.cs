@@ -5,17 +5,12 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>
-    /// Opción de un menú navegable con teclado, joystick o mouse.
-    /// Muestra el puntero "▶" al estar seleccionada y reenvía Cancelar.
-    /// </summary>
     public class OpcionMenu : MonoBehaviour, ISelectHandler, IDeselectHandler, ICancelHandler, IPointerEnterHandler, IMoveHandler
     {
         public Text texto;
         public Text puntero;
         public Action alSeleccionar;
         public Action alCancelar;
-        /// <summary>Opciones con valor (volumen, idioma...): izquierda = -1, derecha = +1.</summary>
         public Action<int> alMoverHorizontal;
         public bool silenciosa;
 
@@ -44,7 +39,6 @@ namespace TP4
             else if (eventData.moveDir == MoveDirection.Right) alMoverHorizontal(+1);
         }
 
-        // Con mouse: pasar por encima selecciona (así el teclado y el mouse conviven).
         public void OnPointerEnter(PointerEventData eventData)
         {
             var b = GetComponent<Selectable>();

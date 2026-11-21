@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace TP4
 {
-    /// <summary>Cámara de combate: leve balanceo, sacudidas al recibir golpes y tomas cinemáticas.</summary>
     [RequireComponent(typeof(Camera))]
     public class BattleCamera : MonoBehaviour
     {
@@ -55,9 +54,6 @@ namespace TP4
             transform.SetPositionAndRotation(pos + offset, rot);
         }
 
-        /// <summary>
-        /// Toma cinemática: órbita cerca del que actúa y luego plano amplio hacia los objetivos.
-        /// </summary>
         public IEnumerator Cinematica(BattleUnit actor, List<BattleUnit> objetivos, float duracion)
         {
             enCinematica = true;
@@ -65,7 +61,6 @@ namespace TP4
             float radio = 2.2f + actor.View.Altura * 0.6f;
             Vector3 frente = actor.transform.forward;
 
-            // Toma 1: órbita alrededor del actor
             float t1 = duracion * 0.6f;
             float anguloInicio = -70f, anguloFin = 50f;
             for (float t = 0; t < t1; t += Time.deltaTime)
@@ -79,7 +74,6 @@ namespace TP4
                 yield return null;
             }
 
-            // Toma 2: detrás del actor mirando a los objetivos
             Vector3 foco = centro;
             if (objetivos.Count > 0)
             {

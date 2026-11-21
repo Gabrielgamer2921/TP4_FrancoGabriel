@@ -17,10 +17,12 @@ MonoBehaviour:
   descripcion: "Asalto. Da\xF1o f\xEDsico alto y r\xE1pido."
   descripcionEN: Assault. High and fast physical damage.
   retrato: {fileID: 0}
-  modelo: {fileID: 0}
+  modelo: {fileID: 919132149155446097, guid: df9d3c65d98b37244880eab9eb8a8d18, type: 3}
   escala: 1
   colorPrincipal: {r: 0.9, g: 0.25, b: 0.25, a: 1}
-  animatorController: {fileID: 0}
+  animatorController: {fileID: 9100000, guid: 7d4d1327cbe2b594d964492f18624edb, type: 2}
+  textura: {fileID: 2800000, guid: 6e3e33f3e98729f40997d562e9f57e8c, type: 3}
+  rotacionModelo: 0
   stats:
     fuerza: 24
     agilidad: 18
@@ -34,5 +36,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f3c8e305ab00f0146a473125baa92a22, type: 2}
   - {fileID: 11400000, guid: 97492178e43362042be49859724f5ed8, type: 2}
   overdrive: {fileID: 11400000, guid: d5540ee26c6f8664aabd9ece816d04af, type: 2}
+  accionesPorTurno: 1
   azarIA: 0.25
   fases: []

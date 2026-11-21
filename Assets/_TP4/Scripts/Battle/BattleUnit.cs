@@ -6,13 +6,9 @@ namespace TP4
 {
     public enum UnitState
     {
-        /// <summary>La barra ATB se está llenando.</summary>
         Cargando,
-        /// <summary>Barra llena: esperando que el jugador / IA elija.</summary>
         Listo,
-        /// <summary>Acción elegida, esperando su turno en la cola.</summary>
         EnCola,
-        /// <summary>Ejecutando su acción.</summary>
         Actuando,
         Muerto
     }
@@ -31,10 +27,6 @@ namespace TP4
         public float restante;
     }
 
-    /// <summary>
-    /// Estado en tiempo real de un robot en combate (vida, energía, ATB, estados...).
-    /// La parte visual vive en <see cref="UnitView"/>.
-    /// </summary>
     public class BattleUnit : MonoBehaviour
     {
         public RobotData Data { get; private set; }
@@ -47,28 +39,21 @@ namespace TP4
         public int Energia { get; private set; }
         public int EnergiaMax { get; private set; }
 
-        /// <summary>0..1. Puede ser negativa después de una acción lenta.</summary>
         public float ATB { get; set; }
-        /// <summary>0..1</summary>
         public float Overdrive { get; private set; }
         public UnitState State { get; set; }
         public float MultiplicadorVelocidad { get; set; } = 1f;
         public float ProvocarRestante { get; private set; }
-        /// <summary>Modo por turnos: vuelve a actuar después de su acción (Overclock).</summary>
         public bool AccionExtra { get; set; }
-        /// <summary>Modo por turnos: acciones por turno (el jefe tiene más).</summary>
         public int AccionesPorTurno { get; private set; } = 1;
 
-        // Memoria para la IA: evita que un robot repita siempre lo mismo.
         public ActionData UltimaAccion { get; set; }
-        /// <summary>Cuántas acciones seguidas sin hacer daño lleva (curar, buffear...).</summary>
         public int RachaSoporte { get; set; }
 
         public readonly List<StatusInstance> Estados = new List<StatusInstance>();
         public readonly List<BuffInstance> Buffs = new List<BuffInstance>();
         public readonly List<AbilityData> Habilidades = new List<AbilityData>();
         readonly HashSet<int> fasesActivadas = new HashSet<int>();
-        /// <summary>Multiplicador de stats base (dificultad para los rivales).</summary>
         float multStats = 1f;
 
         public bool IsAlive => Vida > 0;
@@ -87,7 +72,6 @@ namespace TP4
             }
         }
 
-        // ---------- Eventos (los escucha la vista / UI) ----------
         public event Action<BattleUnit> Changed;
         public event Action<BattleUnit, int> Damaged;
         public event Action<BattleUnit, int> Healed;
@@ -95,7 +79,6 @@ namespace TP4
         public event Action<BattleUnit, string, Color> Message;
         public event Action<BattleUnit> Died;
         public event Action<BattleUnit, BossPhase> PhaseTriggered;
-        /// <summary>Se aplicó un estado nuevo (no se dispara al refrescar uno existente).</summary>
         public event Action<BattleUnit, StatusData> EstadoAplicado;
 
         public void Init(RobotData data, Team team, int slot, UnitView view, float multiplicadorStats = 1f)
@@ -111,7 +94,6 @@ namespace TP4
             Energia = EnergiaMax;
             Overdrive = 0f;
             State = UnitState.Cargando;
-            // Arranque escalonado para que no actúen todos a la vez.
             ATB = UnityEngine.Random.Range(0f, 0.45f);
             Habilidades.Clear();
             Habilidades.AddRange(data.habilidades);
@@ -119,7 +101,6 @@ namespace TP4
             name = $"{team}_{slot}_{data.nombre}";
         }
 
-        // ---------- Stats ----------
         public int GetStat(StatType type)
         {
             float pct = 0f;
@@ -150,12 +131,10 @@ namespace TP4
             return Energia >= a.costoEnergia;
         }
 
-        // ---------- Enfriamientos ----------
         readonly Dictionary<AbilityData, int> enfriamientos = new Dictionary<AbilityData, int>();
 
         public int EnfriamientoRestante(AbilityData a) => a != null && enfriamientos.TryGetValue(a, out int n) ? n : 0;
 
-        /// <summary>Después de cada acción propia: bajan los enfriamientos y arranca el de la acción usada.</summary>
         public void RegistrarUso(ActionData accion)
         {
             var claves = new List<AbilityData>(enfriamientos.Keys);
@@ -163,8 +142,6 @@ namespace TP4
             if (accion is AbilityData hab && hab.enfriamiento > 0) enfriamientos[hab] = hab.enfriamiento;
         }
 
-        // ---------- Tiempo ----------
-        /// <summary>Avanza ATB, estados y buffs. Devuelve true si la unidad acaba de quedar lista.</summary>
         public bool TickTiempo(float dt, float velocidadGlobal)
         {
             if (!IsAlive) return false;
@@ -186,10 +163,6 @@ namespace TP4
             return false;
         }
 
-        /// <summary>
-        /// Modo por turnos: al empezar el turno de este robot, sus estados, buffs y provocación
-        /// avanzan el equivalente a unos segundos (así las duraciones en segundos sirven para los dos modos).
-        /// </summary>
         public void AvanzarTurno(float segundos)
         {
             if (!IsAlive) return;
@@ -238,7 +211,6 @@ namespace TP4
             }
         }
 
-        // ---------- Modificadores de estado ----------
         public int RecibirDano(int cantidad, BattleUnit atacante, bool cargaOverdrive = true)
         {
             if (!IsAlive) return 0;
@@ -302,7 +274,6 @@ namespace TP4
 
         public void AplicarBuff(StatModifierDef mod, float duracion)
         {
-            // Si ya tiene un buff de la misma stat y signo, se refresca en vez de acumular.
             foreach (var b in Buffs)
             {
                 if (b.mod.stat == mod.stat && Mathf.Sign(b.mod.porcentaje) == Mathf.Sign(mod.porcentaje))
@@ -335,7 +306,6 @@ namespace TP4
             }
         }
 
-        /// <summary>Quita los estados liberables (Red eléctrica). Devuelve cuántos quitó.</summary>
         public int Liberar()
         {
             int n = 0;
@@ -366,7 +336,7 @@ namespace TP4
             {
                 if (s.data == data)
                 {
-                    s.restante = data.duracion; // refresca
+                    s.restante = data.duracion;
                     Message?.Invoke(this, data.Nombre, data.color);
                     Changed?.Invoke(this);
                     return;
@@ -377,7 +347,6 @@ namespace TP4
             if (View != null) inst.vfx = View.CrearVfxEstado(data);
             Estados.Add(inst);
 
-            // La parálisis interrumpe a una unidad que estaba lista para actuar.
             if (data.congelaATB && State == UnitState.Listo)
             {
                 State = UnitState.Cargando;
@@ -401,7 +370,6 @@ namespace TP4
         {
             int n = Estados.Count;
             for (int i = Estados.Count - 1; i >= 0; i--) QuitarEstado(i);
-            // También quita los debuffs.
             Buffs.RemoveAll(b => b.mod.porcentaje < 0f);
             if (n > 0) Message?.Invoke(this, Loc.T("msg.purgado"), Color.white);
             Changed?.Invoke(this);
@@ -419,7 +387,6 @@ namespace TP4
         {
             if (!IsAlive) return;
 
-            // Modo por turnos: no hay barra. Un impulso grande (Overclock) da una acción extra.
             var bm = BattleManager.Instance;
             if (bm != null && bm.ModoTurnos)
             {
@@ -440,7 +407,6 @@ namespace TP4
             Changed?.Invoke(this);
         }
 
-        /// <summary>Llamar después de ejecutar una acción: aplica el costo de recuperación.</summary>
         public void TerminarAccion(float recuperacion)
         {
             if (!IsAlive) return;
@@ -462,7 +428,6 @@ namespace TP4
             Died?.Invoke(this);
         }
 
-        // ---------- Jefe ----------
         void RevisarFases()
         {
             if (Data.fases == null) return;

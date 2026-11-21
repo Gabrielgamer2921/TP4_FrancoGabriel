@@ -6,7 +6,6 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>Una opción de menú. Si tiene "valor" se muestra a la derecha y se cambia con izquierda/derecha.</summary>
     public class OpcionLista
     {
         public string texto;
@@ -14,18 +13,11 @@ namespace TP4
         public bool habilitado = true;
         public string ayuda;
         public Color? color;
-        /// <summary>Al confirmar (Enter / A / click).</summary>
         public Action alConfirmar;
-        /// <summary>Al mover a izquierda (-1) o derecha (+1). Opcional.</summary>
         public Action<int> alCambiar;
-        /// <summary>Click en una opción con valor (para el mouse). Si es null se usa alCambiar(+1).</summary>
         public Action alClick;
     }
 
-    /// <summary>
-    /// Lista vertical de opciones navegable con teclado, joystick y mouse, dentro de una ventana.
-    /// La usan el menú principal y el menú de pausa.
-    /// </summary>
     public class MenuLista : MonoBehaviour
     {
         RectTransform ventana;
@@ -135,7 +127,6 @@ namespace TP4
                 opciones.Add(rt.gameObject);
             }
 
-            // Navegación explícita arriba/abajo con wrap (izquierda/derecha quedan para los valores).
             for (int i = 0; i < botones.Count; i++)
             {
                 var nav = new Navigation { mode = Navigation.Mode.Explicit };
@@ -190,7 +181,6 @@ namespace TP4
         }
     }
 
-    /// <summary>Las opciones del juego (compartidas por el menú principal y la pausa).</summary>
     public static class PanelOpciones
     {
         public static List<OpcionLista> Items(Action alVolver)

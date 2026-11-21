@@ -2,7 +2,6 @@ using System.Collections.Generic;
 
 namespace TP4
 {
-    /// <summary>Una acción elegida (por el jugador o la IA) esperando ejecutarse.</summary>
     public class ActionRequest
     {
         public BattleUnit actor;

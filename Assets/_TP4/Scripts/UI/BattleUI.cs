@@ -9,14 +9,8 @@ using UnityEngine.UI;
 
 namespace TP4
 {
-    /// <summary>
-    /// UI de combate estilo FF7 construida por código.
-    /// Toda la navegación usa el EventSystem (InputSystemUIInputModule), así que funciona
-    /// igual con teclado (flechas/WASD + Enter/Espacio + Esc) y con joystick (stick/cruceta + A + B).
-    /// </summary>
     public class BattleUI : MonoBehaviour
     {
-        // ---------- Config de layout (canvas de referencia 1920x1080) ----------
         const float AltoPanel = 290f;
         const float Margen = 16f;
         const float AltoFila = 72f;
@@ -44,19 +38,16 @@ namespace TP4
         RectTransform capaMundo;
         RectTransform capaPopups;
 
-        // ---------- Panel inferior ----------
         class Fila
         {
             public BattleUnit u;
             public Text nombre, estados, vida, energia;
             public Image resaltado;
             public UIFactory.Barra barraVida, barraEnergia, barraOD, barraATB;
-            // Colores tal como están en el prefab (los estados especiales se calculan a partir de estos).
             public Color cNombre, cVida, cOD, cATB;
         }
         readonly List<Fila> filas = new List<Fila>();
 
-        // ---------- Etiquetas de enemigos ----------
         class Etiqueta
         {
             public BattleUnit u;
@@ -67,7 +58,6 @@ namespace TP4
         }
         readonly List<Etiqueta> etiquetas = new List<Etiqueta>();
 
-        // ---------- Menús ----------
         RectTransform ventanaComandos, ventanaLista, ventanaObjetivos;
         RectTransform barraAyuda;
         Text textoAyuda;
@@ -110,14 +100,10 @@ namespace TP4
             public Action alSeleccionar;
         }
 
-        // =====================================================================
-        // Construcción
-        // =====================================================================
         public static BattleUI Crear(BattleManager bm, BattleVisuals vis)
         {
             AsegurarEventSystem();
 
-            // Si existe el prefab editable (TP4 > Generar UI editable) se usa ese; si no, se arma todo por código.
             GameObject go = vis != null && vis.prefabUICombate != null
                 ? UnityEngine.Object.Instantiate(vis.prefabUICombate)
                 : new GameObject("BattleUI");
@@ -134,9 +120,6 @@ namespace TP4
             return ui;
         }
 
-        /// <summary>
-        /// Editor: arma la UI de combate completa (con 3 filas de ejemplo) para guardarla como prefab editable.
-        /// </summary>
         public static GameObject GenerarPlantilla(BattleVisuals vis, GameObject existente = null)
         {
             var go = existente != null ? existente : new GameObject("UI_Combate");
@@ -161,7 +144,6 @@ namespace TP4
             modulo.AssignDefaultActions();
         }
 
-        /// <summary>Textos creados en tiempo de ejecución (popups, opciones de menú).</summary>
         Text T(Transform padre, string s, int tam, TextAnchor al, Color? c = null)
         {
             var t = UIFactory.Texto(padre, s, tam, al, c ?? ColorTexto, fuente);
@@ -197,11 +179,9 @@ namespace TP4
             if (EnJuego) ConstruirEtiquetasEnemigos();
             ConstruirVentanas(b);
 
-            // Cursor de la unidad activa
             cursorActivo = b.Texto(capaMundo, "CursorActivo", "▼", 44, TextAnchor.MiddleCenter, new Color(0.4f, 1f, 1f),
                 rt => UIFactory.Ubicar(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(60, 60)));
 
-            // Capas que siguen visibles durante cinemáticas
             capaPopups = b.Rect(raiz, "Popups", rt => UIFactory.Estirar(rt));
 
             letterArriba = b.Rect(raiz, "LetterboxArriba", rt =>
@@ -217,7 +197,6 @@ namespace TP4
                 rt.gameObject.AddComponent<Image>().color = Color.black;
             });
 
-            // Banner central
             banner = b.Rect(raiz, "Banner", rt =>
             {
                 rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(1, 0.5f);
@@ -234,7 +213,6 @@ namespace TP4
                 rt.GetComponent<Text>().fontStyle = FontStyle.Bold;
             });
 
-            // Panel de fin (título, subtítulo y lugar para los botones)
             panelFin = b.Ventana(raiz, "PanelFin", rt =>
                 UIFactory.Ubicar(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -40), new Vector2(720, 360)));
             tituloFin = b.Texto(panelFin, "Titulo", "¡VICTORIA!", 54, TextAnchor.MiddleCenter, ColorActivo,
@@ -250,7 +228,6 @@ namespace TP4
 
             if (EnJuego)
             {
-                // Estado inicial en juego (en el prefab todo queda visible para poder editarlo).
                 cursorActivo.enabled = false;
                 grupoBanner.alpha = 0f;
                 panelFin.gameObject.SetActive(false);
@@ -286,7 +263,6 @@ namespace TP4
             }
             else encTurno.gameObject.SetActive(false);
 
-            // Filas: en el prefab se generan 3 (el tamaño del equipo). Las que sobren se ocultan.
             int cantidad = EnJuego ? bm.Jugadores.Count : 3;
             for (int i = 0; i < Mathf.Max(cantidad, 3); i++)
             {
@@ -316,7 +292,6 @@ namespace TP4
                 if (!EnJuego) continue;
                 if (!usar)
                 {
-                    // Fila sobrante del prefab: se oculta.
                     foreach (var g in new Component[] { f.resaltado, f.nombre, f.estados, f.vida, f.energia })
                         if (g != null) g.gameObject.SetActive(false);
                     foreach (var barra in new[] { f.barraVida, f.barraEnergia, f.barraOD, f.barraATB })
@@ -393,9 +368,6 @@ namespace TP4
             u.Message += (x, txt, c) => Popup(x, txt, c, 30);
         }
 
-        // =====================================================================
-        // Actualización
-        // =====================================================================
         void Update()
         {
             if (bm == null) return;
@@ -489,7 +461,6 @@ namespace TP4
             }
         }
 
-        /// <summary>Evita que la etiqueta de un robot muy alto (el jefe) se salga por arriba de la pantalla.</summary>
         Vector2 LimitarEtiqueta(Vector2 local)
         {
             float maxY = raiz.rect.height * 0.5f - 240f;
@@ -520,7 +491,6 @@ namespace TP4
                 if (usar && APantalla(objetivosResaltados[i].View.Arriba, out var p))
                 {
                     cursores[i].enabled = true;
-                    // Si el objetivo es enemigo, el cursor va arriba de su etiqueta.
                     bool enemigo = objetivosResaltados[i].Team == Team.Enemigo;
                     if (enemigo) p = LimitarEtiqueta(p);
                     cursores[i].rectTransform.anchoredPosition = p + new Vector2(0, (enemigo ? 70f : 10f) + bob);
@@ -529,9 +499,6 @@ namespace TP4
             }
         }
 
-        // =====================================================================
-        // Turnos y menús
-        // =====================================================================
         void ManejarTurno()
         {
             bool puede = bm.Fase == BattlePhase.EnCurso && !bm.PausaCinematica;
@@ -544,7 +511,6 @@ namespace TP4
                 }
                 else if (modo == Modo.Objetivo && candidatosObjetivo.Exists(c => !c.IsAlive))
                 {
-                    // Un candidato murió mientras elegíamos: reconstruir la lista.
                     Elegir(accionElegida, volverDesdeObjetivo);
                 }
                 else
@@ -600,7 +566,6 @@ namespace TP4
                 ayuda = Loc.T("cmd.items.ayuda"),
                 alConfirmar = () => AbrirItems(u, idxItems)
             });
-            // Liberar: solo aparece si algún aliado quedó atrapado (ej: Red eléctrica del jefe).
             var liberar = GameSession.Torneo != null ? GameSession.Torneo.accionLiberar : null;
             if (liberar != null && bm.Vivos(u.Team).Exists(a => a != u && a.TieneEstadoLiberable))
             {
@@ -692,7 +657,6 @@ namespace TP4
                 case TargetMode.AliadoUnico:
                 {
                     var aliados = bm.Vivos(activo.Team);
-                    // "Liberar" solo puede apuntar a aliados atrapados.
                     if (accion.efectos.Exists(e => e.tipo == EffectType.Liberar))
                         aliados = aliados.FindAll(a => a.TieneEstadoLiberable);
                     foreach (var v in aliados) AgregarOpcionObjetivo(ops, v, $"{v.Vida}/{v.VidaMax}");
@@ -770,7 +734,6 @@ namespace TP4
             textoAyuda.text = hay ? texto : "";
         }
 
-        /// <summary>Llena una ventana con opciones navegables (navegación explícita arriba/abajo con wrap).</summary>
         void MostrarOpciones(RectTransform ventana, float ancho, List<Opcion> ops, Action alCancelar, int indiceInicial, List<GameObject> destino = null)
         {
             if (destino == null) destino = opcionesActuales;
@@ -837,7 +800,6 @@ namespace TP4
                 destino.Add(rt.gameObject);
             }
 
-            // Navegación explícita para que no salte entre ventanas.
             for (int i = 0; i < botones.Count; i++)
             {
                 var nav = new Navigation { mode = Navigation.Mode.Explicit };
@@ -846,7 +808,6 @@ namespace TP4
                 botones[i].navigation = nav;
             }
 
-            // Selección inicial
             int idx = Mathf.Clamp(indiceInicial, 0, Mathf.Max(0, botones.Count - 1));
             Button inicial = null;
             for (int k = 0; k < botones.Count; k++)
@@ -891,10 +852,6 @@ namespace TP4
             }
         }
 
-        // =====================================================================
-        // API usada por el BattleManager
-        // =====================================================================
-        /// <summary>Completa la plantilla del texto de ronda (editable en el prefab, componente TextoLoc).</summary>
         public void SetRonda(params object[] valores)
         {
             var loc = textoRonda.GetComponent<TextoLoc>();
@@ -902,13 +859,10 @@ namespace TP4
             else textoRonda.text = Loc.T("ui.ronda", valores);
         }
 
-        /// <summary>Hay un submenú (Módulos/Ítems) o una selección de objetivo abierta.</summary>
         public bool EnSubmenu => modo == Modo.Lista || modo == Modo.Objetivo;
 
-        /// <summary>Hay algún menú de órdenes abierto.</summary>
         public bool EsperandoOrden => modo != Modo.Nada;
 
-        /// <summary>Arriba a la derecha: "Turno: X" con el robot al que le toca (plantilla editable en el prefab).</summary>
         void ActualizarModoATB()
         {
             var u = bm.UnidadEnTurno;
@@ -989,7 +943,6 @@ namespace TP4
             Destroy(t.gameObject);
         }
 
-        /// <summary>Oculta la UI (cinemáticas) mostrando barras negras tipo película.</summary>
         public void Ocultar(bool ocultar)
         {
             StartCoroutine(RutinaOcultar(ocultar));
@@ -1036,7 +989,6 @@ namespace TP4
             var cont = opcionesFinRect;
             Vector2 posOpciones = cont.anchoredPosition;
             MostrarOpciones(cont, 420, ops, null, 0, opcionesFin);
-            // MostrarOpciones redimensiona el contenedor; se mantiene donde lo dejaste en el editor.
             cont.anchoredPosition = posOpciones;
         }
     }

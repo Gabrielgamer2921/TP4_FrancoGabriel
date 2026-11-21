@@ -35,7 +35,6 @@ namespace TP4
         }
     }
 
-    /// <summary>Modificador porcentual de una stat (ej: Defensa -0.25 = -25%).</summary>
     [Serializable]
     public struct StatModifierDef
     {
